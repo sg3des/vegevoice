@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/url"
+	"strings"
 
 	"github.com/mattn/go-gtk/gtk"
 	"github.com/sg3des/vegevoice/webkit"
@@ -40,6 +41,9 @@ func (ui *UI) NewTab(addr string) *Tab {
 	t.entry.GrabFocus()
 
 	t.entry.Connect("activate", t.activate)
+	t.entry.Connect("changed", t.changed)
+	t.webview.Connect("load-progress-changed", t.loadProgressChanged)
+	t.webview.Connect("load-finished", t.loadFinished)
 
 	if len(addr) > 0 {
 		t.entry.Emit("activate")
@@ -52,21 +56,74 @@ func (ui *UI) NewTab(addr string) *Tab {
 }
 
 func (t *Tab) activate() {
-	addr := t.entry.GetText()
-	u, err := url.Parse(addr)
+	saddr := t.entry.GetText()
+	if !strings.Contains(saddr, ".") {
+		saddr = "http://google.com/search?q=" + saddr
+	}
+	addr := t.parseAddr(saddr)
+	t.OpenUrl(addr)
+}
+
+func (t *Tab) parseAddr(reqaddr string) *url.URL {
+	u, err := url.Parse(reqaddr)
 	if err != nil {
 		log.Println(err)
-		return
+		return u
 	}
 
 	if u.Scheme == "" {
 		u.Scheme = "http"
 	}
 
-	t.label.SetText(u.Path)
-	t.entry.SetText(u.String())
-	t.webview.LoadUri(u.String())
+	return u
+}
+
+func (t *Tab) OpenUrl(addr *url.URL) {
+	t.label.SetText(addr.Path)
+	t.entry.SetText(addr.String())
+	t.webview.LoadUri(addr.String())
 	t.webview.GrabFocus()
+}
+
+func (t *Tab) changed() {
+
+}
+
+func (t *Tab) loadProgressChanged() {
+	t.label.SetText(t.webview.GetTitle())
+	if !t.entry.HasFocus() {
+		t.entry.SetText(t.webview.GetUri())
+	}
+	// log.Println(t.webview.GetProgress())
+}
+
+func (t *Tab) loadFinished() {
+	t.label.SetText(t.webview.GetTitle())
+	if !t.entry.HasFocus() {
+		t.entry.SetText(t.webview.GetUri())
+	}
+}
+
+func (t *Tab) HistoryBack() {
+	t.webview.GoBack()
+	t.label.SetText(t.webview.GetTitle())
+	t.entry.SetText(t.webview.GetUri())
+	// if t.historyN <= 0 {
+	// 	return
+	// }
+	// t.historyN--
+	// t.OpenUrl(t.history[t.historyN])
+}
+
+func (t *Tab) HistoryNext() {
+	t.webview.GoForward()
+	t.label.SetText(t.webview.GetTitle())
+	t.entry.SetText(t.webview.GetUri())
+	// if t.historyN >= len(t.history)-1 {
+	// 	return
+	// }
+	// t.historyN++
+	// t.OpenUrl(t.history[t.historyN])
 }
 
 func (ui *UI) CloseCurrentTab() {

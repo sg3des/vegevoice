@@ -50,6 +50,9 @@ func (ui *UI) createMenubar() *gtk.Widget {
 		<menu action='File'>
 			<menuitem action='NewTab' />
 			<menuitem action='CloseTab' />
+			<menuitem action='OpenUrl' />
+			<menuitem action='Back' />
+			<menuitem action='Next' />
 			<separator />
 			<menuitem action='Quit' />
 		</menu>
@@ -85,6 +88,9 @@ func (ui *UI) createMenubar() *gtk.Widget {
 
 	ui.newAction("NewTab", "New Tab", "<control>t", ui.newTab)
 	ui.newAction("CloseTab", "Close Tab", "<control>w", ui.closeTab)
+	ui.newAction("OpenUrl", "Open URL", "<control>l", ui.focusurl)
+	ui.newAction("Back", "Back", "<Alt>Left", ui.back)
+	ui.newAction("Next", "Next", "<Alt>Right", ui.next)
 	ui.newActionStock("Quit", gtk.STOCK_QUIT, "", ui.Quit)
 
 	// Edit
@@ -160,6 +166,16 @@ func (ui *UI) closeTab() {
 	if len(ui.tabs) == 0 {
 		gtk.MainQuit()
 	}
+}
+func (ui *UI) focusurl() {
+	ui.GetCurrentTab().entry.GrabFocus()
+}
+func (ui *UI) back() {
+	ui.GetCurrentTab().HistoryBack()
+}
+
+func (ui *UI) next() {
+	ui.GetCurrentTab().HistoryNext()
 }
 
 func (ui *UI) Find() {

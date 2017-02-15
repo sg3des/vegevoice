@@ -168,7 +168,7 @@ func (ui *UI) closeTab() {
 	}
 }
 func (ui *UI) focusurl() {
-	ui.GetCurrentTab().entry.GrabFocus()
+	ui.GetCurrentTab().urlbar.GrabFocus()
 }
 func (ui *UI) back() {
 	ui.GetCurrentTab().HistoryBack()

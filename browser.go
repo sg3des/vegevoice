@@ -12,6 +12,10 @@ func init() {
 }
 
 func main() {
+	ReadConf()
+	ReadSettings(conf.Webkit)
+	GlobalSettings()
+
 	go addrs.ReadUrls("addrs/addrs.list")
 	addrs.SetMaxItems(10)
 

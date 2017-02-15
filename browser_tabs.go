@@ -17,8 +17,7 @@ type Tab struct {
 
 	urlbar           *gtk.Entry
 	urlbarCompletion *gtk.EntryCompletion
-	urlbarHints      *gtk.ListStore
-	urlbarUrlHints   []string
+	urlbarHints      []string
 
 	webview *webkit.WebView
 
@@ -29,9 +28,9 @@ type Tab struct {
 func (ui *UI) NewTab(addr string) *Tab {
 	t := &Tab{}
 
-	t.urlbarHints = gtk.NewListStore(glib.G_TYPE_STRING)
 	t.urlbarCompletion = gtk.NewEntryCompletion()
-	t.urlbarCompletion.SetModel(&t.urlbarHints.TreeModel)
+	urlbarListStore := gtk.NewListStore(glib.G_TYPE_STRING)
+	t.urlbarCompletion.SetModel(&urlbarListStore.TreeModel)
 	t.urlbarCompletion.SetTextColumn(0)
 
 	t.urlbar = gtk.NewEntry()
@@ -77,14 +76,14 @@ func (t *Tab) onUrlbarChanged() {
 		return
 	}
 
-	prevcount := len(t.urlbarUrlHints)
+	prevcount := len(t.urlbarHints)
 
-	t.urlbarUrlHints = addrs.GetAddrs(substr)
-	if len(t.urlbarUrlHints) == 0 {
+	t.urlbarHints = addrs.GetAddrs(substr)
+	if len(t.urlbarHints) == 0 {
 		return
 	}
 
-	for i, a := range t.urlbarUrlHints {
+	for i, a := range t.urlbarHints {
 		if i <= prevcount {
 			t.urlbarCompletion.DeleteAction(i)
 		}
@@ -102,12 +101,12 @@ func (t *Tab) onUrlbarCompetionActivated(ctx *glib.CallbackContext) {
 }
 
 func (t *Tab) getUrlFromHints(i int) string {
-	if i >= len(t.urlbarUrlHints) {
+	if i >= len(t.urlbarHints) {
 		log.Println("WARNING! iter more then hint urls")
 		return ""
 	}
 
-	return t.urlbarUrlHints[i]
+	return t.urlbarHints[i]
 }
 
 func (t *Tab) onUrlbarActivate() {

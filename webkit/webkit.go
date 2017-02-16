@@ -419,3 +419,20 @@ func (nr *WebKitNetworkRequest) SetURL(url string) {
 	defer C.free_string(ptr)
 	C.webkit_network_request_set_uri((*C.WebKitNetworkRequest)(nr.GObject.Object), C.to_gcharptr(ptr))
 }
+
+type WebDatabase struct {
+	glib.GObject
+}
+
+func NewWebDatabase(name string) *WebDatabase {
+	// &WebDatabase{glib.GObject{unsafe.Pointer(C.)}}
+
+	ptr := C.CString(name)
+	defer C.free_string(ptr)
+	// C.webkit_web_database_set_name(C.to_gcharptr(ptr))
+	return &WebDatabase{}
+}
+
+func (v *WebDatabase) GetFilename() string {
+	return C.GoString(C.to_charptr(C.webkit_web_database_get_filename(v.Object)))
+}

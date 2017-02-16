@@ -22,7 +22,7 @@ func main() {
 	gtk.Init(nil)
 
 	ui := CreateUi()
-	ui.NewTab("google.com")
+	ui.NewTab(conf.VegeVoice.StartPage)
 
 	gtk.Main()
 }

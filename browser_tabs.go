@@ -7,7 +7,7 @@ import (
 
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
-	"github.com/mattn/go-webkit/webkit"
+	"github.com/sg3des/vegevoice/webkit"
 
 	"github.com/sg3des/vegevoice/addrs"
 )
@@ -26,6 +26,8 @@ type Tab struct {
 }
 
 func (ui *UI) NewTab(addr string) *Tab {
+	// webkit2.Hello()
+
 	t := &Tab{}
 
 	t.urlbarCompletion = gtk.NewEntryCompletion()
@@ -37,6 +39,7 @@ func (ui *UI) NewTab(addr string) *Tab {
 	t.urlbar.SetCompletion(t.urlbarCompletion)
 
 	t.webview = webkit.NewWebView()
+	ApplySettings(t.webview)
 
 	t.swin = gtk.NewScrolledWindow(nil, nil)
 	t.swin.Add(t.webview)
@@ -76,7 +79,7 @@ func (t *Tab) onUrlbarChanged() {
 		return
 	}
 
-	prevcount := len(t.urlbarHints)
+	prevHints := t.urlbarHints
 
 	t.urlbarHints = addrs.GetAddrs(substr)
 	if len(t.urlbarHints) == 0 {
@@ -84,7 +87,11 @@ func (t *Tab) onUrlbarChanged() {
 	}
 
 	for i, a := range t.urlbarHints {
-		if i <= prevcount {
+		if i < len(prevHints) && prevHints[i] == a {
+			continue
+		}
+
+		if i < len(prevHints) {
 			t.urlbarCompletion.DeleteAction(i)
 		}
 
@@ -111,7 +118,7 @@ func (t *Tab) getUrlFromHints(i int) string {
 
 func (t *Tab) onUrlbarActivate() {
 	saddr := t.urlbar.GetText()
-	if !strings.Contains(saddr, ".") {
+	if splitted := strings.Split(saddr, "."); len(splitted) < 2 || len(splitted[1]) == 0 {
 		saddr = "http://google.com/search?q=" + saddr
 	}
 	addr := t.parseAddr(saddr)
@@ -148,9 +155,15 @@ func (t *Tab) onLoadProgressChanged() {
 }
 
 func (t *Tab) onLoadFinished() {
-	t.label.SetText(t.webview.GetTitle())
+	title := t.webview.GetTitle()
+	uri := t.webview.GetUri()
+	if len(title) == 0 || len(uri) == 0 {
+		return
+	}
+
+	t.label.SetText(title)
 	if !t.urlbar.HasFocus() {
-		t.urlbar.SetText(t.webview.GetUri())
+		t.urlbar.SetText(uri)
 	}
 }
 
@@ -178,7 +191,17 @@ func (t *Tab) HistoryNext() {
 
 func (ui *UI) CloseCurrentTab() {
 	n := ui.notebook.GetCurrentPage()
+	if len(ui.tabs) > 1 {
+		if n == 0 {
+			ui.notebook.SetCurrentPage(n + 1)
+		} else {
+			ui.notebook.SetCurrentPage(n - 1)
+		}
+	}
+
 	ui.notebook.RemovePage(ui.tabs[n].swin, n)
+
+	ui.tabs[n] = nil
 	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
 }
 

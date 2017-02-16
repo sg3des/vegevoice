@@ -10,6 +10,9 @@ import (
 
 //conf structure contains configuration
 var conf struct {
+	VegeVoice struct {
+		StartPage string `toml:"start-page"`
+	}
 	Webkit  map[string]interface{}
 	Webview struct {
 		Zoomlevel float64 `toml:"zoom-level"`

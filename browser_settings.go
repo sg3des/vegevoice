@@ -21,5 +21,7 @@ func ApplySettings(webview *webkit.WebView) {
 }
 
 func GlobalSettings() {
-	webkit.SetWebDatabaseDirectoryPath("./testdata/webdatabase")
+	// w := &webkit.WebDatabase{}
+	// log.Println(w.GetFilename())
+	// webkit.SetWebDatabaseDirectoryPath("./testdata/webdatabase")
 }

@@ -25,7 +25,7 @@ type Tab struct {
 	swin *gtk.ScrolledWindow
 }
 
-func (ui *UI) NewTab(addr string) *Tab {
+func (ui *UserInterface) NewTab(addr string) *Tab {
 	// webkit2.Hello()
 
 	t := &Tab{}
@@ -58,6 +58,8 @@ func (ui *UI) NewTab(addr string) *Tab {
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
+	t.webview.Connect("create-web-view", t.onCreateWebView)
+	t.webview.Connect("web-view-ready", t.onWebViewReady)
 
 	if len(addr) > 0 {
 		t.urlbar.Emit("activate")
@@ -70,6 +72,26 @@ func (ui *UI) NewTab(addr string) *Tab {
 
 	ui.tabs = append(ui.tabs, t)
 	return t
+}
+
+func (t *Tab) onCreateWebView(ctx *glib.CallbackContext) interface{} {
+	log.Println("open new tab")
+
+	// log.Printf("%x", ctx.Args(0))
+	webview := webkit.NewWebView()
+	// // ptr := unsafe.Pointer(ctx.Args(0))
+
+	// // ctx.Data() = webview.GetWebView()
+	// log.Println(ptr)
+
+	// log.Println(ptr)
+	return webview.GetWebView()
+	// // log.Println(ctx.Data())
+}
+
+func (t *Tab) onWebViewReady(ctx *glib.CallbackContext) {
+	log.Println(ctx.Args(0))
+	log.Println(ctx.Data())
 }
 
 //onUrlbarChanged signal changed on urlbar entry
@@ -189,7 +211,7 @@ func (t *Tab) HistoryNext() {
 	// t.OpenUrl(t.history[t.historyN])
 }
 
-func (ui *UI) CloseCurrentTab() {
+func (ui *UserInterface) CloseCurrentTab() {
 	n := ui.notebook.GetCurrentPage()
 	if len(ui.tabs) > 1 {
 		if n == 0 {
@@ -205,7 +227,7 @@ func (ui *UI) CloseCurrentTab() {
 	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
 }
 
-func (ui *UI) GetCurrentTab() *Tab {
+func (ui *UserInterface) GetCurrentTab() *Tab {
 	n := ui.notebook.GetCurrentPage()
 	if n < 0 {
 		return nil

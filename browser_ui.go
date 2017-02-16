@@ -7,7 +7,7 @@ var (
 	height int
 )
 
-type UI struct {
+type UserInterface struct {
 	window *gtk.Window
 	vbox   *gtk.VBox
 
@@ -19,8 +19,8 @@ type UI struct {
 	tabs     []*Tab
 }
 
-func CreateUi() *UI {
-	ui := &UI{}
+func CreateUi() *UserInterface {
+	ui := &UserInterface{}
 	ui.window = gtk.NewWindow(gtk.WINDOW_TOPLEVEL)
 	ui.window.SetSizeRequest(600, 600)
 	ui.window.SetTitle("webkit")
@@ -42,9 +42,9 @@ func CreateUi() *UI {
 	return ui
 }
 
-func (ui *UI) createMenubar() *gtk.Widget {
+func (ui *UserInterface) createMenubar() *gtk.Widget {
 
-	UIxml := `
+	UserInterfacexml := `
 <ui>
 	<menubar name='MenuBar'>
 		<menu action='File'>
@@ -75,7 +75,7 @@ func (ui *UI) createMenubar() *gtk.Widget {
 </ui>
 `
 	uiManager := gtk.NewUIManager()
-	uiManager.AddUIFromString(UIxml)
+	uiManager.AddUIFromString(UserInterfacexml)
 
 	ui.accelGroup = uiManager.GetAccelGroup()
 	ui.window.AddAccelGroup(ui.accelGroup)
@@ -113,19 +113,19 @@ func (ui *UI) createMenubar() *gtk.Widget {
 	return uiManager.GetWidget("/MenuBar")
 }
 
-func (ui *UI) newAction(dst, label, accel string, f func()) {
+func (ui *UserInterface) newAction(dst, label, accel string, f func()) {
 	action := gtk.NewAction(dst, label, "", "")
 	action.Connect("activate", f)
 	ui.actionGroup.AddActionWithAccel(action, accel)
 }
 
-func (ui *UI) newActionStock(dst, stock, accel string, f func()) {
+func (ui *UserInterface) newActionStock(dst, stock, accel string, f func()) {
 	action := gtk.NewAction(dst, "", "", stock)
 	action.Connect("activate", f)
 	ui.actionGroup.AddActionWithAccel(action, accel)
 }
 
-func (ui *UI) newToggleAction(dst, label, accel string, state bool, f func()) {
+func (ui *UserInterface) newToggleAction(dst, label, accel string, state bool, f func()) {
 	action := gtk.NewToggleAction(dst, label, "", "")
 	action.SetActive(state)
 	action.Connect("activate", f)
@@ -133,13 +133,13 @@ func (ui *UI) newToggleAction(dst, label, accel string, state bool, f func()) {
 }
 
 // actions
-func (ui *UI) windowResize() {
+func (ui *UserInterface) windowResize() {
 	ui.window.GetSize(&width, &height)
 	ui.notebook.SetSizeRequest(width, height)
 	ui.homogenousTabs()
 }
 
-func (ui *UI) homogenousTabs() {
+func (ui *UserInterface) homogenousTabs() {
 	if len(ui.tabs) == 0 {
 		return
 	}
@@ -157,51 +157,51 @@ func (ui *UI) homogenousTabs() {
 	}
 }
 
-func (ui *UI) newTab() {
+func (ui *UserInterface) newTab() {
 	ui.NewTab("")
 }
-func (ui *UI) closeTab() {
+func (ui *UserInterface) closeTab() {
 	ui.CloseCurrentTab()
 
 	if len(ui.tabs) == 0 {
 		gtk.MainQuit()
 	}
 }
-func (ui *UI) focusurl() {
+func (ui *UserInterface) focusurl() {
 	ui.GetCurrentTab().urlbar.GrabFocus()
 }
-func (ui *UI) back() {
+func (ui *UserInterface) back() {
 	ui.GetCurrentTab().HistoryBack()
 }
 
-func (ui *UI) next() {
+func (ui *UserInterface) next() {
 	ui.GetCurrentTab().HistoryNext()
 }
 
-func (ui *UI) Find() {
+func (ui *UserInterface) Find() {
 	// ui.GetCurrentTab().Find()
 }
-func (ui *UI) FindNext() {
+func (ui *UserInterface) FindNext() {
 	// currentTab().FindNext(true)
 }
-func (ui *UI) FindPrev() {
+func (ui *UserInterface) FindPrev() {
 	// currentTab().FindNext(false)
 }
-func (ui *UI) ReplaceOne() {
+func (ui *UserInterface) ReplaceOne() {
 	// currentTab().Replace(false)
 }
-func (ui *UI) ReplaceAll() {
+func (ui *UserInterface) ReplaceAll() {
 	// currentTab().Replace(true)
 }
-func (ui *UI) ToggleMenuBar() {
-	// conf.UI.MenuBarVisible = !conf.UI.MenuBarVisible
-	// ui.menubar.SetVisible(conf.UI.MenuBarVisible)
+func (ui *UserInterface) ToggleMenuBar() {
+	// conf.UserInterface.MenuBarVisible = !conf.UserInterface.MenuBarVisible
+	// ui.menubar.SetVisible(conf.UserInterface.MenuBarVisible)
 }
-func (ui *UI) ShowFindbar() {
+func (ui *UserInterface) ShowFindbar() {
 }
-func (ui *UI) ShowReplbar() {
+func (ui *UserInterface) ShowReplbar() {
 }
 
-func (ui *UI) Quit() {
+func (ui *UserInterface) Quit() {
 	gtk.MainQuit()
 }

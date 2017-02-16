@@ -9,6 +9,8 @@ import (
 	"github.com/sg3des/vegevoice/addrs"
 )
 
+var UI *UserInterface
+
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
@@ -23,8 +25,8 @@ func main() {
 
 	gtk.Init(nil)
 
-	ui := CreateUi()
-	ui.NewTab(conf.VegeVoice.StartPage)
+	UI = CreateUi()
+	UI.NewTab(conf.VegeVoice.StartPage)
 
 	gtk.Main()
 }

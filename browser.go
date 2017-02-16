@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"path"
 
 	"github.com/mattn/go-gtk/gtk"
 	"github.com/sg3des/vegevoice/addrs"
@@ -16,7 +18,7 @@ func main() {
 	ReadSettings(conf.Webkit)
 	GlobalSettings()
 
-	go addrs.ReadUrls("addrs/addrs.list")
+	go addrs.ReadUrls(path.Join(os.Getenv("XDG_CONFIG_HOME"), "vegevoice", "addrs.list"))
 	addrs.SetMaxItems(10)
 
 	gtk.Init(nil)

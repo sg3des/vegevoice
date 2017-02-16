@@ -12,7 +12,7 @@ import (
 var conf struct {
 	VegeVoice struct {
 		StartPage string `toml:"start-page"`
-	}
+	} `toml:"vegevoice"`
 	Webkit  map[string]interface{}
 	Webview struct {
 		Zoomlevel float64 `toml:"zoom-level"`

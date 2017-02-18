@@ -4,7 +4,10 @@ package webkit
 #ifndef uintptr
 #define uintptr unsigned int*
 #endif
+
+
 #include <webkit/webkit.h>
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,6 +15,7 @@ package webkit
 #include <string.h>
 #include <stdio.h>
 #include <pthread.h>
+
 
 static inline void free_string(char* s) { free(s); }
 
@@ -29,10 +33,13 @@ static WebKitWebSettings* to_WebKitWebSettings(void* w) { return WEBKIT_WEB_SETT
 */
 // #cgo pkg-config: webkit-1.0
 import "C"
-import "github.com/mattn/go-gtk/gtk"
 
-import "github.com/mattn/go-gtk/glib"
-import "unsafe"
+import (
+	"unsafe"
+
+	"github.com/mattn/go-gtk/glib"
+	"github.com/mattn/go-gtk/gtk"
+)
 
 func bool2gboolean(b bool) C.gboolean {
 	if b {
@@ -281,6 +288,24 @@ func (v *WebView) GetIconUri() string {
 	return C.GoString(C.to_charptr(C.webkit_web_view_get_icon_uri(v.getWebView())))
 }
 
+// func (v *WebView) ConnectCreateWebView(f func() *WebView) {
+// 	callbackCreateWebView = f
+
+// 	C.g_signal_connect(v.getWebView(), "create-web-view", C.G_CALLBACK(callCreateWebView), v.getWebView())
+
+// 	// refFun := reflect.ValueOf(f)
+// 	//C.ConnectCreateWebView(v.getWebView())
+// 	// C.g_signal_connect(v.getWebView(), "create-web-view", C.G_CALLBACK(f))
+// }
+
+// var callbackCreateWebView func() *WebView
+
+// //export callCreateWebView
+// func callCreateWebView() *C.WebKitWebView {
+// 	log.Println("call")
+// 	return callbackCreateWebView().getWebView()
+// }
+
 //WEBKIT_API void webkit_set_cache_model (WebKitCacheModel cache_model);
 //WEBKIT_API WebKitCacheModel webkit_get_cache_model (void);
 
@@ -422,21 +447,4 @@ func (nr *WebKitNetworkRequest) SetURL(url string) {
 	ptr := C.CString(url)
 	defer C.free_string(ptr)
 	C.webkit_network_request_set_uri((*C.WebKitNetworkRequest)(nr.GObject.Object), C.to_gcharptr(ptr))
-}
-
-type WebDatabase struct {
-	glib.GObject
-}
-
-func NewWebDatabase(name string) *WebDatabase {
-	// &WebDatabase{glib.GObject{unsafe.Pointer(C.)}}
-
-	ptr := C.CString(name)
-	defer C.free_string(ptr)
-	// C.webkit_web_database_set_name(C.to_gcharptr(ptr))
-	return &WebDatabase{}
-}
-
-func (v *WebDatabase) GetFilename() string {
-	return C.GoString(C.to_charptr(C.webkit_web_database_get_filename(v.Object)))
 }

@@ -1,5 +1,11 @@
 package main
 
+/*
+#include <webkit/webkit.h>
+*/
+// #cgo pkg-config: webkit-1.0
+import "C"
+
 import (
 	"log"
 	"net/url"
@@ -59,7 +65,8 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
 	t.webview.Connect("create-web-view", t.onCreateWebView)
-	t.webview.Connect("web-view-ready", t.onWebViewReady)
+	// t.webview.ConnectCreateWebView(t.onCreateWebView)
+	// t.webview.Connect("web-view-ready", t.onWebViewReady)
 
 	if len(addr) > 0 {
 		t.urlbar.Emit("activate")
@@ -74,19 +81,9 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	return t
 }
 
-func (t *Tab) onCreateWebView(ctx *glib.CallbackContext) interface{} {
-	log.Println("open new tab")
-
-	// log.Printf("%x", ctx.Args(0))
-	webview := webkit.NewWebView()
-	// // ptr := unsafe.Pointer(ctx.Args(0))
-
-	// // ctx.Data() = webview.GetWebView()
-	// log.Println(ptr)
-
-	// log.Println(ptr)
-	return webview.GetWebView()
-	// // log.Println(ctx.Data())
+func (t *Tab) onCreateWebView() interface{} {
+	newtab := UI.NewTab("")
+	return newtab.webview.GetWebView()
 }
 
 func (t *Tab) onWebViewReady(ctx *glib.CallbackContext) {

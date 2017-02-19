@@ -22,7 +22,7 @@ type UserInterface struct {
 func CreateUi() *UserInterface {
 	ui := &UserInterface{}
 	ui.window = gtk.NewWindow(gtk.WINDOW_TOPLEVEL)
-	ui.window.SetSizeRequest(600, 600)
+	ui.window.SetSizeRequest(900, 600)
 	ui.window.SetTitle("webkit")
 	ui.window.Connect("destroy", ui.Quit)
 	ui.window.Connect("check-resize", ui.windowResize)

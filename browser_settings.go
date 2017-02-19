@@ -18,6 +18,7 @@ func ApplySettings(webview *webkit.WebView) {
 	if conf.Webview.Zoomlevel > 0 {
 		webview.SetZoomLevel(conf.Webview.Zoomlevel)
 	}
+	webview.SetFullContentZoom(conf.Webview.FullContentZoom)
 }
 
 func GlobalSettings() {

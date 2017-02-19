@@ -1,11 +1,5 @@
 package main
 
-/*
-#include <webkit/webkit.h>
-*/
-// #cgo pkg-config: webkit-1.0
-import "C"
-
 import (
 	"log"
 	"net/url"
@@ -66,7 +60,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.webview.Connect("load-finished", t.onLoadFinished)
 	t.webview.Connect("create-web-view", t.onCreateWebView)
 	// t.webview.ConnectCreateWebView(t.onCreateWebView)
-	// t.webview.Connect("web-view-ready", t.onWebViewReady)
+	t.webview.Connect("web-view-ready", t.onWebViewReady)
 
 	if len(addr) > 0 {
 		t.urlbar.Emit("activate")
@@ -87,8 +81,9 @@ func (t *Tab) onCreateWebView() interface{} {
 }
 
 func (t *Tab) onWebViewReady(ctx *glib.CallbackContext) {
+	log.Println("onWebViewReady")
 	log.Println(ctx.Args(0))
-	log.Println(ctx.Data())
+	// log.Println(ctx.Data())
 }
 
 //onUrlbarChanged signal changed on urlbar entry

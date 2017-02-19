@@ -15,7 +15,8 @@ var conf struct {
 	} `toml:"vegevoice"`
 	Webkit  map[string]interface{}
 	Webview struct {
-		Zoomlevel float64 `toml:"zoom-level"`
+		Zoomlevel       float64 `toml:"zoom-level"`
+		FullContentZoom bool    `toml:"full-content-zoom"`
 	}
 }
 

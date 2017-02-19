@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"unsafe"
 
+	"github.com/mattn/go-gtk/gdk"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 	"github.com/sg3des/vegevoice/webkit"
@@ -13,7 +15,8 @@ import (
 )
 
 type Tab struct {
-	label *gtk.Label
+	tabbox *gtk.EventBox
+	label  *gtk.Label
 
 	urlbar           *gtk.Entry
 	urlbarCompletion *gtk.EntryCompletion
@@ -26,8 +29,6 @@ type Tab struct {
 }
 
 func (ui *UserInterface) NewTab(addr string) *Tab {
-	// webkit2.Hello()
-
 	t := &Tab{}
 
 	t.urlbarCompletion = gtk.NewEntryCompletion()
@@ -49,8 +50,11 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.vbox.PackStart(t.swin, true, true, 0)
 
 	t.label = gtk.NewLabel(addr)
+	t.tabbox = gtk.NewEventBox()
+	t.tabbox.Add(t.label)
+	t.tabbox.ShowAll()
 
-	n := ui.notebook.AppendPage(t.vbox, t.label)
+	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
 	ui.notebook.ShowAll()
 	ui.notebook.SetCurrentPage(n)
 	t.urlbar.GrabFocus()
@@ -59,8 +63,8 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
 	t.webview.Connect("create-web-view", t.onCreateWebView)
-	// t.webview.ConnectCreateWebView(t.onCreateWebView)
 	t.webview.Connect("web-view-ready", t.onWebViewReady)
+	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
 
 	if len(addr) > 0 {
 		t.urlbar.Emit("activate")
@@ -73,6 +77,19 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 
 	ui.tabs = append(ui.tabs, t)
 	return t
+}
+
+func (t *Tab) onLabelContextMenu(ctx *glib.CallbackContext) {
+	arg := ctx.Args(0)
+	event := *(**gdk.EventButton)(unsafe.Pointer(&arg))
+
+	if event.Button == 3 {
+		m := gtk.NewMenu()
+		m.Add(gtk.NewMenuItemWithLabel("label"))
+		m.Add(gtk.NewMenuItemWithLabel("label - 2"))
+		m.ShowAll()
+		m.Popup(nil, nil, nil, t.label, uint(ctx.Args(0)), uint32(ctx.Args(1)))
+	}
 }
 
 func (t *Tab) onCreateWebView() interface{} {

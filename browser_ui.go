@@ -1,6 +1,8 @@
 package main
 
-import "github.com/mattn/go-gtk/gtk"
+import (
+	"github.com/mattn/go-gtk/gtk"
+)
 
 var (
 	width  int
@@ -149,10 +151,10 @@ func (ui *UserInterface) homogenousTabs() {
 
 	for _, t := range ui.tabs {
 		if leftwidth > 0 {
-			t.label.SetSizeRequest(tabwidth+1, 12)
+			t.tabbox.SetSizeRequest(tabwidth+1, 12)
 			leftwidth--
 		} else {
-			t.label.SetSizeRequest(tabwidth, 12)
+			t.tabbox.SetSizeRequest(tabwidth, 12)
 		}
 	}
 }

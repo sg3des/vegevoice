@@ -18,7 +18,7 @@ func init() {
 func main() {
 	ReadConf()
 	ReadSettings(conf.Webkit)
-	GlobalSettings()
+	// GlobalSettings()
 
 	go addrs.ReadUrls(path.Join(os.Getenv("XDG_CONFIG_HOME"), "vegevoice", "addrs.list"))
 	addrs.SetMaxItems(10)

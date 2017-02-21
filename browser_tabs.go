@@ -18,6 +18,7 @@ type Tab struct {
 	tabbox *gtk.EventBox
 	label  *gtk.Label
 
+	idonChanged      int
 	urlbar           *gtk.Entry
 	urlbarCompletion *gtk.EntryCompletion
 	urlbarHints      []string
@@ -73,7 +74,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	}
 
 	t.urlbarCompletion.Connect("action-activated", t.onUrlbarCompetionActivated)
-	t.urlbar.Connect("changed", t.onUrlbarChanged)
+	t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
 
 	ui.tabs = append(ui.tabs, t)
 	return t
@@ -110,6 +111,9 @@ func (t *Tab) onUrlbarChanged() {
 		return
 	}
 
+	l := t.urlbar.GetPosition()
+	substr = substr[:l+1]
+
 	prevHints := t.urlbarHints
 
 	t.urlbarHints = addrs.GetAddrs(substr)
@@ -118,6 +122,17 @@ func (t *Tab) onUrlbarChanged() {
 	}
 
 	for i, a := range t.urlbarHints {
+		if i == 0 && l > 0 && l < len(a) && a[:l+1] == substr {
+			t.urlbar.HandlerDisconnect(t.idonChanged)
+
+			t.urlbar.SetPosition(0)
+			t.urlbar.SetText(a)
+			t.urlbar.SetPosition(l)
+
+			t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
+			continue
+		}
+
 		if i < len(prevHints) && prevHints[i] == a {
 			continue
 		}

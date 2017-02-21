@@ -265,12 +265,9 @@ func (t *Tab) onLoadProgressChanged() {
 		pix = pix.ScaleSimple(12, 12, gdkpixbuf.INTERP_BILINEAR)
 		t.favicon.SetFromPixbuf(pix)
 	}
-
 }
 
 func (t *Tab) onLoadFinished() {
-	// log.Println()
-
 	title := t.webview.GetTitle()
 	uri := t.webview.GetUri()
 	if len(title) == 0 || len(uri) == 0 {
@@ -287,22 +284,12 @@ func (t *Tab) HistoryBack() {
 	t.webview.GoBack()
 	t.label.SetText(t.webview.GetTitle())
 	t.urlbar.SetText(t.webview.GetUri())
-	// if t.historyN <= 0 {
-	// 	return
-	// }
-	// t.historyN--
-	// t.OpenUrl(t.history[t.historyN])
 }
 
 func (t *Tab) HistoryNext() {
 	t.webview.GoForward()
 	t.label.SetText(t.webview.GetTitle())
 	t.urlbar.SetText(t.webview.GetUri())
-	// if t.historyN >= len(t.history)-1 {
-	// 	return
-	// }
-	// t.historyN++
-	// t.OpenUrl(t.history[t.historyN])
 }
 
 func (ui *UserInterface) CloseCurrentTab() {

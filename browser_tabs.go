@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	"github.com/mattn/go-gtk/gdk"
+	"github.com/mattn/go-gtk/gdkpixbuf"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 	"github.com/sg3des/vegevoice/webkit"
@@ -15,13 +16,17 @@ import (
 )
 
 type Tab struct {
-	tabbox *gtk.EventBox
-	label  *gtk.Label
+	tabbox  *gtk.EventBox
+	favicon *gtk.Image
+	label   *gtk.Label
+	Pinned  bool
 
 	idonChanged      int
 	urlbar           *gtk.Entry
 	urlbarCompletion *gtk.EntryCompletion
 	urlbarHints      []string
+
+	tabPopupMenu *gtk.Menu
 
 	webview *webkit.WebView
 
@@ -50,9 +55,17 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.vbox.PackStart(t.urlbar, false, false, 0)
 	t.vbox.PackStart(t.swin, true, true, 0)
 
+	t.favicon = gtk.NewImage()
+	// t.favicon.SetSizeRequest(8, 8)
+	// t.favicon.
 	t.label = gtk.NewLabel(addr)
+
+	htabbox := gtk.NewHBox(false, 0)
+	htabbox.PackStart(t.favicon, false, false, 0)
+	htabbox.PackStart(t.label, true, true, 0)
+
 	t.tabbox = gtk.NewEventBox()
-	t.tabbox.Add(t.label)
+	t.tabbox.Add(htabbox)
 	t.tabbox.ShowAll()
 
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
@@ -67,6 +80,8 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.webview.Connect("web-view-ready", t.onWebViewReady)
 	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
 
+	t.initTabPopupMenu()
+
 	if len(addr) > 0 {
 		t.urlbar.Emit("activate")
 	} else {
@@ -80,16 +95,62 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	return t
 }
 
+func (t *Tab) initTabPopupMenu() {
+	itemPin := gtk.NewMenuItemWithLabel("Pin Tab")
+	itemClose := gtk.NewMenuItemWithLabel("Close Tab")
+	itemCloseOther := gtk.NewMenuItemWithLabel("Close Other Tabs")
+
+	itemPin.Connect("activate", t.Pin)
+	itemClose.Connect("activate", t.Close)
+	itemCloseOther.Connect("activate", t.CloseOtherTabs)
+
+	t.tabPopupMenu = gtk.NewMenu()
+	t.tabPopupMenu.Add(itemPin)
+	t.tabPopupMenu.Add(itemClose)
+	t.tabPopupMenu.Add(itemCloseOther)
+	t.tabPopupMenu.ShowAll()
+}
+
+func (t *Tab) Pin() {
+	t.Pinned = true
+	t.tabbox.SetSizeRequest(12, 12)
+}
+
+func (t *Tab) Close() {
+	n := UI.notebook.PageNum(t.vbox)
+	UI.CloseTab(n)
+}
+
+func (t *Tab) CloseOtherTabs() {
+	min := 1
+	for {
+		for n, _t := range UI.tabs {
+			if _t.label == t.label {
+				UI.notebook.SetCurrentPage(n)
+				continue
+			}
+
+			if _t.Pinned {
+				min++
+				continue
+			}
+
+			UI.CloseTab(n)
+			break
+		}
+
+		if UI.notebook.GetNPages() == min {
+			break
+		}
+	}
+}
+
 func (t *Tab) onLabelContextMenu(ctx *glib.CallbackContext) {
 	arg := ctx.Args(0)
 	event := *(**gdk.EventButton)(unsafe.Pointer(&arg))
 
 	if event.Button == 3 {
-		m := gtk.NewMenu()
-		m.Add(gtk.NewMenuItemWithLabel("label"))
-		m.Add(gtk.NewMenuItemWithLabel("label - 2"))
-		m.ShowAll()
-		m.Popup(nil, nil, nil, t.label, uint(ctx.Args(0)), uint32(ctx.Args(1)))
+		t.tabPopupMenu.Popup(nil, nil, nil, t.label, uint(arg), uint32(ctx.Args(1)))
 	}
 }
 
@@ -197,10 +258,19 @@ func (t *Tab) onLoadProgressChanged() {
 	if !t.urlbar.HasFocus() {
 		t.urlbar.SetText(t.webview.GetUri())
 	}
-	// log.Println(t.webview.GetProgress())
+
+	if uri := t.webview.GetIconUri(); len(uri) > 0 {
+		iconpath := downloadIcon(uri)
+		pix := gtk.NewImageFromFile(iconpath).GetPixbuf()
+		pix = pix.ScaleSimple(12, 12, gdkpixbuf.INTERP_BILINEAR)
+		t.favicon.SetFromPixbuf(pix)
+	}
+
 }
 
 func (t *Tab) onLoadFinished() {
+	// log.Println()
+
 	title := t.webview.GetTitle()
 	uri := t.webview.GetUri()
 	if len(title) == 0 || len(uri) == 0 {
@@ -237,6 +307,10 @@ func (t *Tab) HistoryNext() {
 
 func (ui *UserInterface) CloseCurrentTab() {
 	n := ui.notebook.GetCurrentPage()
+	ui.CloseTab(n)
+}
+
+func (ui *UserInterface) CloseTab(n int) {
 	if len(ui.tabs) > 1 {
 		if n == 0 {
 			ui.notebook.SetCurrentPage(n + 1)
@@ -245,10 +319,14 @@ func (ui *UserInterface) CloseCurrentTab() {
 		}
 	}
 
-	ui.notebook.RemovePage(ui.tabs[n].swin, n)
+	ui.notebook.RemovePage(ui.tabs[n].vbox, n)
 
 	ui.tabs[n] = nil
 	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
+
+	if len(ui.tabs) == 0 {
+		gtk.MainQuit()
+	}
 }
 
 func (ui *UserInterface) GetCurrentTab() *Tab {

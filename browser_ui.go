@@ -89,7 +89,7 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	ui.actionGroup.AddAction(gtk.NewAction("File", "File", "", ""))
 
 	ui.newAction("NewTab", "New Tab", "<control>t", ui.newTab)
-	ui.newAction("CloseTab", "Close Tab", "<control>w", ui.closeTab)
+	ui.newAction("CloseTab", "Close Tab", "<control>w", ui.CloseCurrentTab)
 	ui.newAction("OpenUrl", "Open URL", "<control>l", ui.focusurl)
 	ui.newAction("Back", "Back", "<Alt>Left", ui.back)
 	ui.newAction("Next", "Next", "<Alt>Right", ui.next)
@@ -142,14 +142,26 @@ func (ui *UserInterface) windowResize() {
 }
 
 func (ui *UserInterface) homogenousTabs() {
-	if len(ui.tabs) == 0 {
+	lenTabs := len(ui.tabs)
+	if lenTabs == 0 {
 		return
 	}
 
-	tabwidth := (width - len(ui.tabs)*6) / len(ui.tabs)
-	leftwidth := (width - len(ui.tabs)*6) % len(ui.tabs)
+	// var pinned int
+	for _, t := range ui.tabs {
+		if t.Pinned {
+			lenTabs--
+		}
+	}
+
+	tabwidth := (width - lenTabs*6) / lenTabs
+	leftwidth := (width - lenTabs*6) % lenTabs
 
 	for _, t := range ui.tabs {
+		if t.Pinned {
+			continue
+		}
+
 		if leftwidth > 0 {
 			t.tabbox.SetSizeRequest(tabwidth+1, 12)
 			leftwidth--
@@ -162,13 +174,11 @@ func (ui *UserInterface) homogenousTabs() {
 func (ui *UserInterface) newTab() {
 	ui.NewTab("")
 }
-func (ui *UserInterface) closeTab() {
-	ui.CloseCurrentTab()
 
-	if len(ui.tabs) == 0 {
-		gtk.MainQuit()
-	}
-}
+// func (ui *UserInterface) closeTab() {
+// 	ui.CloseCurrentTab()
+
+// }
 func (ui *UserInterface) focusurl() {
 	ui.GetCurrentTab().urlbar.GrabFocus()
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path"
 
@@ -29,4 +31,25 @@ func main() {
 	UI.NewTab(conf.VegeVoice.StartPage)
 
 	gtk.Main()
+}
+
+func downloadIcon(uri string) string {
+	response, e := http.Get(uri)
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	defer response.Body.Close()
+
+	file, err := os.Create(path.Base(uri))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = io.Copy(file, response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	file.Close()
+	return path.Base(uri)
 }

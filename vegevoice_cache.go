@@ -68,7 +68,7 @@ func getFaviconPath(domain string) string {
 
 func resizeFavicon(iconpath string) *gdkpixbuf.Pixbuf {
 	pix := gtk.NewImageFromFile(iconpath).GetPixbuf()
-	return pix.ScaleSimple(12, 12, gdkpixbuf.INTERP_BILINEAR)
+	return pix.ScaleSimple(14, 14, gdkpixbuf.INTERP_BILINEAR)
 }
 
 func downloadFavicon(domain string, uri string) (*gdkpixbuf.Pixbuf, error) {

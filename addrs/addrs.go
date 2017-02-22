@@ -41,24 +41,24 @@ func GetAddrs(substr string) []string {
 		}
 	}
 
-	for _, addr := range addrs {
-		if strings.Contains(addr, substr) && !ChosenContains(chosen, addr) {
-			chosen = append(chosen, addr)
-			if len(chosen) >= maxReturnedItems {
-				return chosen
-			}
-		}
-	}
+	// for _, addr := range addrs {
+	// 	if strings.Contains(addr, substr) && !ChosenContains(chosen, addr) {
+	// 		chosen = append(chosen, addr)
+	// 		if len(chosen) >= maxReturnedItems {
+	// 			return chosen
+	// 		}
+	// 	}
+	// }
 
-	substr = strings.Replace(substr, ".", "", -1)
-	for _, addr := range addrs {
-		if strings.ContainsAny(addr, substr) && !ChosenContains(chosen, addr) {
-			chosen = append(chosen, addr)
-			if len(chosen) >= maxReturnedItems {
-				return chosen
-			}
-		}
-	}
+	// substr = strings.Replace(substr, ".", "", -1)
+	// for _, addr := range addrs {
+	// 	if strings.ContainsAny(addr, substr) && !ChosenContains(chosen, addr) {
+	// 		chosen = append(chosen, addr)
+	// 		if len(chosen) >= maxReturnedItems {
+	// 			return chosen
+	// 		}
+	// 	}
+	// }
 
 	return chosen
 }

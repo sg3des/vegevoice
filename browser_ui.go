@@ -30,6 +30,7 @@ func CreateUi() *UserInterface {
 	ui.menubar = ui.createMenubar()
 	ui.notebook = gtk.NewNotebook()
 	ui.notebook.SetBorderWidth(0)
+	// ui.notebook.SetShowBorder(false)
 	ui.notebook.SetTabBorder(0)
 
 	ui.vbox = gtk.NewVBox(false, 0)

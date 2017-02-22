@@ -26,6 +26,7 @@ type Tab struct {
 	urlbar           *gtk.Entry
 	urlbarCompletion *gtk.EntryCompletion
 	urlbarHints      []string
+	urlbarHint       string
 
 	tabPopupMenu *gtk.Menu
 
@@ -72,7 +73,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	// htabbox.PackEnd(t.progressbar, false, false, 0)
 
 	tabtable := gtk.NewTable(1, 2, false)
-	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 1, 1)
 	tabtable.Attach(t.label, 1, 2, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
 	// tabtable.Attach(t.progressbar, 0, 2, 1, 2, gtk.FILL, gtk.FILL, 0, 0)
 
@@ -146,7 +147,10 @@ func (t *Tab) Pin() {
 		t.tabbox.SetSizeRequest(16, 16)
 		t.label.SetVisible(false)
 
+		//reorder
+		n := ui.notebook.PageNum(t.vbox)
 		ui.notebook.ReorderChild(t.vbox, 0)
+		ui.tabs[0], ui.tabs[n] = ui.tabs[n], ui.tabs[0]
 	}
 }
 
@@ -195,20 +199,36 @@ func (t *Tab) onCreateWebView() interface{} {
 
 //onUrlbarChanged signal changed on urlbar entry
 func (t *Tab) onUrlbarChanged() {
-	substr := t.urlbar.GetText()
-	if len(substr) == 0 {
+	if !t.urlbar.HasFocus() {
 		return
 	}
 
+	substr := t.urlbar.GetText()
+
+	var right string
 	l := t.urlbar.GetPosition()
 	if l+1 < len(substr) {
+		right = substr[l+1:]
 		substr = substr[:l+1]
 	}
 
 	prevHints := t.urlbarHints
-
 	t.urlbarHints = addrs.GetAddrs(substr)
 	if len(t.urlbarHints) == 0 {
+
+		//clear inline tail
+		if len(right) > 0 && len(t.urlbarHint) > 0 && right == t.urlbarHint {
+			t.urlbar.HandlerDisconnect(t.idonChanged)
+			t.urlbar.SetText(substr)
+			t.urlbarHint = ""
+			t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
+		}
+
+		//delete completaions
+		for i := range prevHints {
+			t.urlbarCompletion.DeleteAction(i)
+		}
+
 		return
 	}
 
@@ -220,10 +240,11 @@ func (t *Tab) onUrlbarChanged() {
 
 			t.urlbar.SetPosition(0)
 			t.urlbar.SetText(a)
+			t.urlbarHint = a[l+1:]
 			t.urlbar.SetPosition(l)
 
 			t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
-			continue
+			// continue
 		}
 
 		if i < len(prevHints) && prevHints[i] == a {

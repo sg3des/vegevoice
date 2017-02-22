@@ -53,6 +53,7 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 			<menuitem action='NewTab' />
 			<menuitem action='CloseTab' />
 			<menuitem action='OpenUrl' />
+			<menuitem action='Reload' />
 			<menuitem action='Back' />
 			<menuitem action='Next' />
 			<separator />
@@ -91,6 +92,7 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	ui.newAction("NewTab", "New Tab", "<control>t", ui.newTab)
 	ui.newAction("CloseTab", "Close Tab", "<control>w", ui.CloseCurrentTab)
 	ui.newAction("OpenUrl", "Open URL", "<control>l", ui.focusurl)
+	ui.newAction("Reload", "Reload", "<control>r", ui.reload)
 	ui.newAction("Back", "Back", "<Alt>Left", ui.back)
 	ui.newAction("Next", "Next", "<Alt>Right", ui.next)
 	ui.newActionStock("Quit", gtk.STOCK_QUIT, "", ui.Quit)
@@ -177,6 +179,10 @@ func (ui *UserInterface) homogenousTabs() {
 
 func (ui *UserInterface) newTab() {
 	ui.NewTab("")
+}
+
+func (ui *UserInterface) reload() {
+	ui.GetCurrentTab().Reload()
 }
 
 // func (ui *UserInterface) closeTab() {

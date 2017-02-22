@@ -327,6 +327,10 @@ func (t *Tab) HistoryNext() {
 	t.urlbar.SetText(t.webview.GetUri())
 }
 
+func (t *Tab) Reload() {
+	t.webview.Reload()
+}
+
 func (ui *UserInterface) CloseCurrentTab() {
 	n := ui.notebook.GetCurrentPage()
 	ui.CloseTab(n)

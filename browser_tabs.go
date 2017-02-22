@@ -15,7 +15,7 @@ import (
 )
 
 type Tab struct {
-	tabbox      *gtk.EventBox
+	tabbox      *gtk.VBox
 	favicon     *gtk.Image
 	label       *gtk.Label
 	progressbar *gtk.ProgressBar
@@ -59,22 +59,37 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.vbox.PackStart(t.swin, true, true, 0)
 
 	// tab
-	t.favicon = gtk.NewImageFromStock("view-refresh", 12)
+	t.favicon = gtk.NewImage()
+	t.favicon.SetSizeRequest(12, 12)
 	t.label = gtk.NewLabel(addr)
-	htabbox := gtk.NewHBox(false, 0)
-	htabbox.PackStart(t.favicon, false, false, 0)
-	htabbox.PackStart(t.label, false, false, 1)
+
+	// t.progressbar.SetOrientation(gtk.PROGRESS_BOTTOM_TO_TOP)
+
+	// htabbox := gtk.NewHBox(false, 0)
+
+	// htabbox.PackStart(t.favicon, false, false, 0)
+	// htabbox.PackStart(t.label, false, false, 1)
+	// htabbox.PackEnd(t.progressbar, false, false, 0)
+
+	tabtable := gtk.NewTable(1, 2, false)
+	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	tabtable.Attach(t.label, 1, 2, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	// tabtable.Attach(t.progressbar, 0, 2, 1, 2, gtk.FILL, gtk.FILL, 0, 0)
+
+	// vtabbox := gtk.NewVBox(false, 0)
+	// vtabbox.PackStart(htabbox, true, true, 0)
+	// vtabbox.PackEnd(t.progressbar, false, false, 0)
+
+	eventbox := gtk.NewEventBox()
+	eventbox.Add(tabtable)
+	eventbox.ShowAll()
 
 	t.progressbar = gtk.NewProgressBar()
-	t.progressbar.SetSizeRequest(100, 4)
+	t.progressbar.SetSizeRequest(4, 4)
 
-	vtabbox := gtk.NewVBox(false, 0)
-	vtabbox.PackStart(htabbox, true, true, 0)
-	vtabbox.PackEnd(t.progressbar, false, false, 0)
-
-	t.tabbox = gtk.NewEventBox()
-	t.tabbox.Add(vtabbox)
-	t.tabbox.ShowAll()
+	t.tabbox = gtk.NewVBox(false, 0)
+	t.tabbox.Add(eventbox)
+	t.tabbox.PackEnd(t.progressbar, false, true, 0)
 
 	//notebook
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)

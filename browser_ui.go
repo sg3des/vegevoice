@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/mattn/go-gtk/gtk"
-)
+import "github.com/mattn/go-gtk/gtk"
 
 var (
 	width  int

@@ -299,10 +299,6 @@ func (t *Tab) onLoadFinished() {
 }
 
 func (t *Tab) onIconLoaded(ctx *glib.CallbackContext) {
-	t.SetFavicon()
-}
-
-func (t *Tab) SetFavicon() {
 	u, err := url.Parse(t.webview.GetUri())
 	if err != nil {
 		log.Println(err)

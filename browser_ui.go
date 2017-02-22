@@ -154,6 +154,10 @@ func (ui *UserInterface) homogenousTabs() {
 		}
 	}
 
+	if lenTabs == 0 {
+		return
+	}
+
 	tabwidth := (width - lenTabs*6) / lenTabs
 	leftwidth := (width - lenTabs*6) % lenTabs
 

@@ -112,21 +112,28 @@ func (t *Tab) initTabPopupMenu() {
 }
 
 func (t *Tab) Pin() {
-	t.Pinned = true
-	t.tabbox.SetSizeRequest(12, 12)
+	if t.Pinned {
+		t.Pinned = false
+		t.label.SetVisible(true)
+		ui.homogenousTabs()
+	} else {
+		t.Pinned = true
+		t.tabbox.SetSizeRequest(12, 12)
+		t.label.SetVisible(false)
+	}
 }
 
 func (t *Tab) Close() {
-	n := UI.notebook.PageNum(t.vbox)
-	UI.CloseTab(n)
+	n := ui.notebook.PageNum(t.vbox)
+	ui.CloseTab(n)
 }
 
 func (t *Tab) CloseOtherTabs() {
 	min := 1
 	for {
-		for n, _t := range UI.tabs {
+		for n, _t := range ui.tabs {
 			if _t.label == t.label {
-				UI.notebook.SetCurrentPage(n)
+				ui.notebook.SetCurrentPage(n)
 				continue
 			}
 
@@ -135,11 +142,11 @@ func (t *Tab) CloseOtherTabs() {
 				continue
 			}
 
-			UI.CloseTab(n)
+			ui.CloseTab(n)
 			break
 		}
 
-		if UI.notebook.GetNPages() == min {
+		if ui.notebook.GetNPages() == min {
 			break
 		}
 	}
@@ -155,7 +162,7 @@ func (t *Tab) onLabelContextMenu(ctx *glib.CallbackContext) {
 }
 
 func (t *Tab) onCreateWebView() interface{} {
-	newtab := UI.NewTab("")
+	newtab := ui.NewTab("")
 	return newtab.webview.GetWebView()
 }
 

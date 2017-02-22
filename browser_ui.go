@@ -29,6 +29,8 @@ func CreateUi() *UserInterface {
 
 	ui.menubar = ui.createMenubar()
 	ui.notebook = gtk.NewNotebook()
+	ui.notebook.SetBorderWidth(0)
+	ui.notebook.SetTabBorder(0)
 
 	ui.vbox = gtk.NewVBox(false, 0)
 	ui.vbox.PackStart(ui.menubar, true, true, 0)
@@ -158,8 +160,8 @@ func (ui *UserInterface) homogenousTabs() {
 		return
 	}
 
-	tabwidth := (width - lenTabs*6) / lenTabs
-	leftwidth := (width - lenTabs*6) % lenTabs
+	tabwidth := (width - lenTabs) / lenTabs
+	leftwidth := (width - lenTabs) % lenTabs
 
 	for _, t := range ui.tabs {
 		if t.Pinned {
@@ -167,10 +169,10 @@ func (ui *UserInterface) homogenousTabs() {
 		}
 
 		if leftwidth > 0 {
-			t.tabbox.SetSizeRequest(tabwidth+1, 12)
+			t.tabbox.SetSizeRequest(tabwidth+1, 16)
 			leftwidth--
 		} else {
-			t.tabbox.SetSizeRequest(tabwidth, 12)
+			t.tabbox.SetSizeRequest(tabwidth, 16)
 		}
 	}
 }

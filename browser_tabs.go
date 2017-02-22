@@ -60,7 +60,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 
 	// tab
 	t.favicon = gtk.NewImage()
-	t.favicon.SetSizeRequest(12, 12)
+	t.favicon.SetSizeRequest(16, 16)
 	t.label = gtk.NewLabel(addr)
 
 	// t.progressbar.SetOrientation(gtk.PROGRESS_BOTTOM_TO_TOP)
@@ -143,7 +143,7 @@ func (t *Tab) Pin() {
 		ui.homogenousTabs()
 	} else {
 		t.Pinned = true
-		t.tabbox.SetSizeRequest(12, 12)
+		t.tabbox.SetSizeRequest(16, 16)
 		t.label.SetVisible(false)
 
 		ui.notebook.ReorderChild(t.vbox, 0)

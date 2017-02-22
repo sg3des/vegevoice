@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path"
 	"strings"
 )
 
 var addrs []string
 var maxReturnedItems int
 
-func ReadUrls(filename string) {
-	f, err := os.Open(filename)
+func ReadUrls(dir string) {
+	addrsfile := path.Join(dir, "addrs.list")
+
+	f, err := os.Open(addrsfile)
 	if err != nil {
 		log.Println(err)
 		return
@@ -24,6 +27,10 @@ func ReadUrls(filename string) {
 }
 
 func GetAddrs(substr string) []string {
+	if len(addrs) == 0 {
+		return nil
+	}
+
 	var chosen []string
 	for _, addr := range addrs {
 		if strings.HasPrefix(addr, substr) {

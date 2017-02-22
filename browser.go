@@ -1,9 +1,7 @@
 package main
 
 import (
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path"
 
@@ -11,18 +9,35 @@ import (
 	"github.com/sg3des/vegevoice/addrs"
 )
 
-var ui *UserInterface
+var (
+	ui *UserInterface
+
+	dirConf string
+	dirStrg string
+)
 
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
 
-func main() {
-	ReadConf()
-	ReadSettings(conf.Webkit)
-	// GlobalSettings()
+func resolveWD() {
+	envConfig := os.Getenv("XDG_CONFIG_HOME")
+	if len(envConfig) == 0 {
+		envConfig = path.Join(os.Getenv("HOME"), ".config")
+	}
+	dirConf = path.Join(envConfig, "vegevoice")
+	os.MkdirAll(dirConf, 0644)
 
-	go addrs.ReadUrls(path.Join(os.Getenv("XDG_CONFIG_HOME"), "vegevoice", "addrs.list"))
+	dirStrg = path.Join(os.Getenv("HOME"), ".local", "share", "vegevoice")
+	os.MkdirAll(dirConf, 0644)
+}
+
+func main() {
+	resolveWD()
+	ReadConf(dirConf)
+	SetCacheDir(dirStrg)
+
+	go addrs.ReadUrls(dirConf)
 	addrs.SetMaxItems(10)
 
 	gtk.Init(nil)
@@ -31,25 +46,4 @@ func main() {
 	ui.NewTab(conf.VegeVoice.StartPage)
 
 	gtk.Main()
-}
-
-func downloadIcon(uri string) string {
-	response, e := http.Get(uri)
-	if e != nil {
-		log.Fatal(e)
-	}
-
-	defer response.Body.Close()
-
-	file, err := os.Create(path.Base(uri))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	file.Close()
-	return path.Base(uri)
 }

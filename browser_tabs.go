@@ -7,7 +7,6 @@ import (
 	"unsafe"
 
 	"github.com/mattn/go-gtk/gdk"
-	"github.com/mattn/go-gtk/gdkpixbuf"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 	"github.com/sg3des/vegevoice/webkit"
@@ -55,7 +54,8 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.vbox.PackStart(t.urlbar, false, false, 0)
 	t.vbox.PackStart(t.swin, true, true, 0)
 
-	t.favicon = gtk.NewImage()
+	t.favicon = gtk.NewImageFromStock("view-refresh", 12)
+
 	// t.favicon.SetSizeRequest(8, 8)
 	// t.favicon.
 	t.label = gtk.NewLabel(addr)
@@ -77,7 +77,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
 	t.webview.Connect("create-web-view", t.onCreateWebView)
-	t.webview.Connect("web-view-ready", t.onWebViewReady)
+	t.webview.Connect("icon-loaded", t.onIconLoaded)
 	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
 
 	t.initTabPopupMenu()
@@ -166,12 +166,6 @@ func (t *Tab) onCreateWebView() interface{} {
 	return newtab.webview.GetWebView()
 }
 
-func (t *Tab) onWebViewReady(ctx *glib.CallbackContext) {
-	log.Println("onWebViewReady")
-	log.Println(ctx.Args(0))
-	// log.Println(ctx.Data())
-}
-
 //onUrlbarChanged signal changed on urlbar entry
 func (t *Tab) onUrlbarChanged() {
 	substr := t.urlbar.GetText()
@@ -180,7 +174,9 @@ func (t *Tab) onUrlbarChanged() {
 	}
 
 	l := t.urlbar.GetPosition()
-	substr = substr[:l+1]
+	if l+1 < len(substr) {
+		substr = substr[:l+1]
+	}
 
 	prevHints := t.urlbarHints
 
@@ -190,6 +186,8 @@ func (t *Tab) onUrlbarChanged() {
 	}
 
 	for i, a := range t.urlbarHints {
+
+		//inline completion
 		if i == 0 && l > 0 && l < len(a) && a[:l+1] == substr {
 			t.urlbar.HandlerDisconnect(t.idonChanged)
 
@@ -209,6 +207,7 @@ func (t *Tab) onUrlbarChanged() {
 			t.urlbarCompletion.DeleteAction(i)
 		}
 
+		//popup completion
 		t.urlbarCompletion.InsertActionText(i, a)
 	}
 
@@ -265,13 +264,6 @@ func (t *Tab) onLoadProgressChanged() {
 	if !t.urlbar.HasFocus() {
 		t.urlbar.SetText(t.webview.GetUri())
 	}
-
-	if uri := t.webview.GetIconUri(); len(uri) > 0 {
-		iconpath := downloadIcon(uri)
-		pix := gtk.NewImageFromFile(iconpath).GetPixbuf()
-		pix = pix.ScaleSimple(12, 12, gdkpixbuf.INTERP_BILINEAR)
-		t.favicon.SetFromPixbuf(pix)
-	}
 }
 
 func (t *Tab) onLoadFinished() {
@@ -284,6 +276,23 @@ func (t *Tab) onLoadFinished() {
 	t.label.SetText(title)
 	if !t.urlbar.HasFocus() {
 		t.urlbar.SetText(uri)
+	}
+}
+
+func (t *Tab) onIconLoaded(ctx *glib.CallbackContext) {
+	t.SetFavicon()
+}
+
+func (t *Tab) SetFavicon() {
+	u, err := url.Parse(t.webview.GetUri())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	favicon := GetFavicon(u.Hostname(), t.webview.GetIconUri())
+	if favicon != nil {
+		t.favicon.SetFromPixbuf(favicon)
 	}
 }
 

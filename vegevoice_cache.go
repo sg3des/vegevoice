@@ -25,14 +25,13 @@ func SetCacheDir(dir string) {
 }
 
 func GetFavicon(domain string, iconuri string) *gdkpixbuf.Pixbuf {
-	log.Println(domain, iconuri)
 	if len(domain) == 0 {
 		return nil
 	}
 
 	if len(iconuri) > 0 {
 		if icon, ok := cacheFavicons[domain]; ok {
-			log.Println("return from cache", domain)
+			// log.Println("return from cache", domain)
 			return icon
 		}
 	}
@@ -42,7 +41,7 @@ func GetFavicon(domain string, iconuri string) *gdkpixbuf.Pixbuf {
 		//get from disk
 		icon := resizeFavicon(iconpath)
 		if icon != nil {
-			log.Println("return from disk", domain)
+			// log.Println("return from disk", domain)
 			cacheFavicons[domain] = icon
 			return icon
 		}
@@ -55,7 +54,7 @@ func GetFavicon(domain string, iconuri string) *gdkpixbuf.Pixbuf {
 			log.Println(err)
 			return nil
 		}
-		log.Println("download done for", domain)
+		// log.Println("download done for", domain)
 
 		cacheFavicons[domain] = icon
 		return icon

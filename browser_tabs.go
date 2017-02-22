@@ -15,10 +15,12 @@ import (
 )
 
 type Tab struct {
-	tabbox  *gtk.EventBox
-	favicon *gtk.Image
-	label   *gtk.Label
-	Pinned  bool
+	tabbox      *gtk.EventBox
+	favicon     *gtk.Image
+	label       *gtk.Label
+	progressbar *gtk.ProgressBar
+
+	Pinned bool
 
 	idonChanged      int
 	urlbar           *gtk.Entry
@@ -36,6 +38,7 @@ type Tab struct {
 func (ui *UserInterface) NewTab(addr string) *Tab {
 	t := &Tab{}
 
+	//urlbar
 	t.urlbarCompletion = gtk.NewEntryCompletion()
 	urlbarListStore := gtk.NewListStore(glib.G_TYPE_STRING)
 	t.urlbarCompletion.SetModel(&urlbarListStore.TreeModel)
@@ -44,6 +47,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.urlbar = gtk.NewEntry()
 	t.urlbar.SetCompletion(t.urlbarCompletion)
 
+	//webview
 	t.webview = webkit.NewWebView()
 	ApplySettings(t.webview)
 
@@ -54,24 +58,30 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.vbox.PackStart(t.urlbar, false, false, 0)
 	t.vbox.PackStart(t.swin, true, true, 0)
 
+	// tab
 	t.favicon = gtk.NewImageFromStock("view-refresh", 12)
-
-	// t.favicon.SetSizeRequest(8, 8)
-	// t.favicon.
 	t.label = gtk.NewLabel(addr)
-
 	htabbox := gtk.NewHBox(false, 0)
 	htabbox.PackStart(t.favicon, false, false, 0)
-	htabbox.PackStart(t.label, true, true, 0)
+	htabbox.PackStart(t.label, false, false, 1)
+
+	t.progressbar = gtk.NewProgressBar()
+	t.progressbar.SetSizeRequest(100, 4)
+
+	vtabbox := gtk.NewVBox(false, 0)
+	vtabbox.PackStart(htabbox, true, true, 0)
+	vtabbox.PackEnd(t.progressbar, false, false, 0)
 
 	t.tabbox = gtk.NewEventBox()
-	t.tabbox.Add(htabbox)
+	t.tabbox.Add(vtabbox)
 	t.tabbox.ShowAll()
 
+	//notebook
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
 	ui.notebook.ShowAll()
 	ui.notebook.SetCurrentPage(n)
 	t.urlbar.GrabFocus()
+	t.progressbar.SetVisible(false)
 
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
@@ -120,6 +130,8 @@ func (t *Tab) Pin() {
 		t.Pinned = true
 		t.tabbox.SetSizeRequest(12, 12)
 		t.label.SetVisible(false)
+
+		ui.notebook.ReorderChild(t.vbox, 0)
 	}
 }
 
@@ -260,6 +272,9 @@ func (t *Tab) OpenUrl(addr *url.URL) {
 }
 
 func (t *Tab) onLoadProgressChanged() {
+	t.progressbar.SetVisible(true)
+	t.progressbar.SetFraction(t.webview.GetProgress())
+
 	t.label.SetText(t.webview.GetTitle())
 	if !t.urlbar.HasFocus() {
 		t.urlbar.SetText(t.webview.GetUri())
@@ -267,6 +282,10 @@ func (t *Tab) onLoadProgressChanged() {
 }
 
 func (t *Tab) onLoadFinished() {
+	t.progressbar.SetVisible(false)
+	// style := t.progressbar.GetStyle()
+	// style.
+
 	title := t.webview.GetTitle()
 	uri := t.webview.GetUri()
 	if len(title) == 0 || len(uri) == 0 {

@@ -26,10 +26,10 @@ func resolveWD() {
 		envConfig = path.Join(os.Getenv("HOME"), ".config")
 	}
 	dirConf = path.Join(envConfig, "vegevoice")
-	os.MkdirAll(dirConf, 0644)
+	os.MkdirAll(dirConf, 0755)
 
 	dirStrg = path.Join(os.Getenv("HOME"), ".local", "share", "vegevoice")
-	os.MkdirAll(dirConf, 0644)
+	os.MkdirAll(dirConf, 0755)
 }
 
 func main() {

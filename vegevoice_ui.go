@@ -160,6 +160,7 @@ func (ui *UserInterface) homogenousTabs() {
 
 	for _, t := range ui.tabs {
 		if t.Pinned {
+			t.tabbox.SetSizeRequest(16, 16)
 			continue
 		}
 

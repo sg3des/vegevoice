@@ -9,9 +9,9 @@ import (
 	"github.com/mattn/go-gtk/gdk"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
-	"github.com/sg3des/vegevoice/webkit"
 
-	"github.com/sg3des/vegevoice/addrs"
+	"github.com/sg3des/vegevoice/urlstorage"
+	"github.com/sg3des/vegevoice/webkit"
 )
 
 type Tab struct {
@@ -40,13 +40,13 @@ type Tab struct {
 	swin *gtk.ScrolledWindow
 }
 
-func (ui *UserInterface) NewTab(addr string) *Tab {
+func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t := &Tab{}
 
 	// tab
 	t.favicon = gtk.NewImage()
 	t.favicon.SetSizeRequest(16, 16)
-	t.label = gtk.NewLabel(addr)
+	t.label = gtk.NewLabel(reqURL)
 
 	tabtable := gtk.NewTable(1, 2, false)
 	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 1, 1)
@@ -70,6 +70,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.urlbarCompletion.SetTextColumn(0)
 
 	t.urlbar = gtk.NewEntry()
+	t.urlbar.SetText(reqURL)
 	t.urlbar.SetCompletion(t.urlbarCompletion)
 
 	//webview
@@ -130,7 +131,7 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 
 	t.initTabPopupMenu()
 
-	if len(addr) > 0 {
+	if len(reqURL) > 0 {
 		t.urlbar.Emit("activate")
 	} else {
 		t.label.SetText("New Tab")
@@ -160,20 +161,27 @@ func (t *Tab) initTabPopupMenu() {
 }
 
 func (t *Tab) Pin() {
+	u := t.urlbar.GetText()
+	toPage := len(urlstorage.GetPinnedTabs())
+
 	if t.Pinned {
 		t.Pinned = false
 		t.label.SetVisible(true)
-		ui.homogenousTabs()
+		urlstorage.DelPinnedTab(u)
 	} else {
 		t.Pinned = true
-		t.tabbox.SetSizeRequest(16, 16)
 		t.label.SetVisible(false)
-
-		//reorder
-		n := ui.notebook.PageNum(t.vbox)
-		ui.notebook.ReorderChild(t.vbox, 0)
-		ui.tabs[0], ui.tabs[n] = ui.tabs[n], ui.tabs[0]
+		urlstorage.AddPinnedTab(u)
 	}
+
+	t.Reorder(toPage)
+	ui.homogenousTabs()
+}
+
+func (t *Tab) Reorder(to int) {
+	n := ui.notebook.PageNum(t.vbox)
+	ui.notebook.ReorderChild(t.vbox, to)
+	ui.tabs[to], ui.tabs[n] = ui.tabs[n], ui.tabs[to]
 }
 
 func (t *Tab) Close() {
@@ -235,7 +243,7 @@ func (t *Tab) onUrlbarChanged() {
 	}
 
 	prevHints := t.urlbarHints
-	t.urlbarHints = addrs.GetAddrs(substr)
+	t.urlbarHints = urlstorage.GetURLs(substr)
 	if len(t.urlbarHints) == 0 {
 
 		//clear inline tail
@@ -284,9 +292,9 @@ func (t *Tab) onUrlbarChanged() {
 }
 
 func (t *Tab) onUrlbarCompetionActivated(ctx *glib.CallbackContext) {
-	addr := t.getUrlFromHints(int(ctx.Args(0)))
+	u := t.getUrlFromHints(int(ctx.Args(0)))
 
-	t.urlbar.SetText(addr)
+	t.urlbar.SetText(u)
 	t.urlbar.Emit("activate")
 }
 
@@ -300,16 +308,16 @@ func (t *Tab) getUrlFromHints(i int) string {
 }
 
 func (t *Tab) onUrlbarActivate() {
-	saddr := t.urlbar.GetText()
-	if splitted := strings.Split(saddr, "."); len(splitted) < 2 || len(splitted[1]) == 0 {
-		saddr = "http://google.com/search?q=" + saddr
+	reqURL := t.urlbar.GetText()
+	if splitted := strings.Split(reqURL, "."); len(splitted) < 2 || len(splitted[1]) == 0 {
+		reqURL = "https://google.com/search?q=" + reqURL
 	}
-	addr := t.parseAddr(saddr)
-	t.OpenUrl(addr)
+	u := t.parseURL(reqURL)
+	t.OpenUrl(u)
 }
 
-func (t *Tab) parseAddr(reqaddr string) *url.URL {
-	u, err := url.Parse(reqaddr)
+func (t *Tab) parseURL(reqURL string) *url.URL {
+	u, err := url.Parse(reqURL)
 	if err != nil {
 		log.Println(err)
 		return u
@@ -322,10 +330,11 @@ func (t *Tab) parseAddr(reqaddr string) *url.URL {
 	return u
 }
 
-func (t *Tab) OpenUrl(addr *url.URL) {
-	t.label.SetText(addr.Path)
-	t.urlbar.SetText(addr.String())
-	t.webview.LoadUri(addr.String())
+func (t *Tab) OpenUrl(u *url.URL) {
+	t.favicon.SetFromStock("refresh", 16)
+	t.label.SetText(u.Path)
+	t.urlbar.SetText(u.String())
+	t.webview.LoadUri(u.String())
 	t.webview.GrabFocus()
 }
 

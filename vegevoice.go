@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/mattn/go-gtk/gtk"
-	"github.com/sg3des/vegevoice/addrs"
+	"github.com/sg3des/vegevoice/urlstorage"
 )
 
 var (
@@ -37,13 +37,18 @@ func main() {
 	ReadConf(dirConf)
 	SetCacheDir(dirStrg)
 
-	go addrs.ReadUrls(dirConf)
-	addrs.SetMaxItems(10)
+	go urlstorage.Initialize(dirStrg)
+	urlstorage.SetMaxItems(10)
 
 	gtk.Init(nil)
 
 	ui = CreateUi()
-	ui.NewTab(conf.VegeVoice.StartPage)
+
+	for _, u := range urlstorage.GetPinnedTabs() {
+		ui.NewTab(u).Pinned = true
+	}
+	// ui.NewTab(conf.VegeVoice.StartPage)
+	ui.NewTab("")
 
 	gtk.Main()
 }

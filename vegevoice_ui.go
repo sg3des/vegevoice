@@ -1,6 +1,8 @@
 package main
 
-import "github.com/mattn/go-gtk/gtk"
+import (
+	"github.com/mattn/go-gtk/gtk"
+)
 
 var (
 	width  int
@@ -30,7 +32,7 @@ func CreateUi() *UserInterface {
 	ui.menubar = ui.createMenubar()
 	ui.notebook = gtk.NewNotebook()
 	ui.notebook.SetBorderWidth(0)
-	// ui.notebook.SetShowBorder(false)
+	ui.notebook.SetShowBorder(false)
 	ui.notebook.SetTabBorder(0)
 
 	ui.vbox = gtk.NewVBox(false, 0)
@@ -65,10 +67,6 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 			<menuitem action='Find'/>
 			<menuitem action='FindNext'/>
 			<menuitem action='FindPrev'/>
-			<separator />
-			<menuitem action='Replace'/>
-			<menuitem action='ReplaceOne'/>
-			<menuitem action='ReplaceAll'/>
 		</menu>
 
 		<menu name='View' action='View'>
@@ -101,19 +99,15 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	// Edit
 	ui.actionGroup.AddAction(gtk.NewAction("Edit", "Edit", "", ""))
 
-	ui.newActionStock("Find", gtk.STOCK_FIND, "", ui.ShowFindbar)
-	ui.newAction("FindNext", "Find Next", "F3", ui.FindNext)
-	ui.newAction("FindPrev", "Find Previous", "<shift>F3", ui.FindPrev)
-
-	ui.newActionStock("Replace", gtk.STOCK_FIND_AND_REPLACE, "<control>h", ui.ShowReplbar)
-	ui.newAction("ReplaceOne", "Replace One", "<control><shift>h", ui.ReplaceOne)
-	ui.newAction("ReplaceAll", "Replace All", "<control><alt>Return", ui.ReplaceAll)
+	ui.newActionStock("Find", gtk.STOCK_FIND, "", ui.showFindbar)
+	ui.newAction("FindNext", "Find Next", "F3", ui.findNext)
+	ui.newAction("FindPrev", "Find Previous", "<shift>F3", ui.findPrev)
 
 	// View
 	ui.actionGroup.AddAction(gtk.NewAction("View", "View", "", ""))
 	// ui.actionGroup.AddAction(gtk.NewAction("Encoding", "Encoding", "", ""))
 
-	ui.newToggleAction("Menubar", "Menubar", "<control>M", false, ui.ToggleMenuBar)
+	ui.newToggleAction("Menubar", "Menubar", "<control>M", false, ui.toggleMenuBar)
 
 	return uiManager.GetWidget("/MenuBar")
 }
@@ -186,6 +180,38 @@ func (ui *UserInterface) reload() {
 	ui.GetCurrentTab().Reload()
 }
 
+func (ui *UserInterface) CloseCurrentTab() {
+	n := ui.notebook.GetCurrentPage()
+	ui.CloseTab(n)
+}
+
+func (ui *UserInterface) CloseTab(n int) {
+	if len(ui.tabs) > 1 {
+		if n == 0 {
+			ui.notebook.SetCurrentPage(n + 1)
+		} else {
+			ui.notebook.SetCurrentPage(n - 1)
+		}
+	}
+
+	ui.notebook.RemovePage(ui.tabs[n].vbox, n)
+
+	ui.tabs[n] = nil
+	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
+
+	if len(ui.tabs) == 0 {
+		gtk.MainQuit()
+	}
+}
+
+func (ui *UserInterface) GetCurrentTab() *Tab {
+	n := ui.notebook.GetCurrentPage()
+	if n < 0 {
+		return nil
+	}
+	return ui.tabs[n]
+}
+
 // func (ui *UserInterface) closeTab() {
 // 	ui.CloseCurrentTab()
 
@@ -201,28 +227,31 @@ func (ui *UserInterface) next() {
 	ui.GetCurrentTab().HistoryNext()
 }
 
-func (ui *UserInterface) Find() {
-	// ui.GetCurrentTab().Find()
+func (ui *UserInterface) findNext() {
+	t := ui.GetCurrentTab()
+	t.findbox.SetVisible(true)
+	t.onSearch(true)
 }
-func (ui *UserInterface) FindNext() {
-	// currentTab().FindNext(true)
+func (ui *UserInterface) findPrev() {
+	t := ui.GetCurrentTab()
+	t.findbox.SetVisible(true)
+	t.onSearch(false)
 }
-func (ui *UserInterface) FindPrev() {
-	// currentTab().FindNext(false)
+
+func (ui *UserInterface) showFindbar() {
+	t := ui.GetCurrentTab()
+	if t.findbox.GetVisible() {
+		t.findbox.SetVisible(false)
+	} else {
+		t.findbox.SetVisible(true)
+		t.findbar.GrabFocus()
+		t.onSearch(true)
+	}
 }
-func (ui *UserInterface) ReplaceOne() {
-	// currentTab().Replace(false)
-}
-func (ui *UserInterface) ReplaceAll() {
-	// currentTab().Replace(true)
-}
-func (ui *UserInterface) ToggleMenuBar() {
+
+func (ui *UserInterface) toggleMenuBar() {
 	// conf.UserInterface.MenuBarVisible = !conf.UserInterface.MenuBarVisible
 	// ui.menubar.SetVisible(conf.UserInterface.MenuBarVisible)
-}
-func (ui *UserInterface) ShowFindbar() {
-}
-func (ui *UserInterface) ShowReplbar() {
 }
 
 func (ui *UserInterface) Quit() {

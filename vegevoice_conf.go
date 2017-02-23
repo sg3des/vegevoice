@@ -25,7 +25,6 @@ var conf struct {
 
 //ReadConf set default values for configuration and parse config file
 func ReadConf(dir string) {
-	//parse config files
 	configfile := path.Join(dir, "vegevoice.conf")
 
 	if _, err := os.Stat(configfile); err != nil {

@@ -139,13 +139,19 @@ func (v *WebView) LoadHtmlString(content, base_uri string) {
 }
 
 //WEBKIT_API void webkit_web_view_load_request (WebKitWebView *web_view, WebKitNetworkRequest *request);
-func (v *WebView) SearchText(text string, case_sensitive bool, forward bool, wrap bool) bool {
+func (v *WebView) SearchText(text string, caseSensitive bool, forward bool, wrap bool) bool {
 	ptext := C.CString(text)
 	defer C.free_string(ptext)
-	return gboolean2bool(C.webkit_web_view_search_text(v.getWebView(), C.to_gcharptr(ptext), bool2gboolean(case_sensitive), bool2gboolean(forward), bool2gboolean(wrap)))
+	return gboolean2bool(C.webkit_web_view_search_text(v.getWebView(), C.to_gcharptr(ptext), bool2gboolean(caseSensitive), bool2gboolean(forward), bool2gboolean(wrap)))
 }
 
 //WEBKIT_API guint webkit_web_view_mark_text_matches (WebKitWebView *web_view, const gchar *string, gboolean case_sensitive, guint limit);
+func (v *WebView) MarkTextMatches(text string, caseSensitive bool, limit uint) uint {
+	ptext := C.CString(text)
+	defer C.free_string(ptext)
+	return uint(C.webkit_web_view_mark_text_matches(v.getWebView(), C.to_gcharptr(ptext), bool2gboolean(caseSensitive), C.guint(limit)))
+
+}
 func (v *WebView) SetHighlightTextMatches(highlight bool) {
 	C.webkit_web_view_set_highlight_text_matches(v.getWebView(), bool2gboolean(highlight))
 }

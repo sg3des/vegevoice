@@ -15,12 +15,12 @@ import (
 )
 
 type Tab struct {
-	tabbox      *gtk.VBox
-	favicon     *gtk.Image
-	label       *gtk.Label
-	progressbar *gtk.ProgressBar
-
-	Pinned bool
+	tabbox       *gtk.VBox
+	favicon      *gtk.Image
+	label        *gtk.Label
+	progressbar  *gtk.ProgressBar
+	tabPopupMenu *gtk.Menu
+	Pinned       bool
 
 	idonChanged      int
 	urlbar           *gtk.Entry
@@ -28,9 +28,13 @@ type Tab struct {
 	urlbarHints      []string
 	urlbarHint       string
 
-	tabPopupMenu *gtk.Menu
-
 	webview *webkit.WebView
+
+	findbox     *gtk.Table
+	findbar     *gtk.Entry
+	findbtnCS   *gtk.ToggleButton
+	findbtnNext *gtk.Button
+	findbtnPrev *gtk.Button
 
 	vbox *gtk.VBox
 	swin *gtk.ScrolledWindow
@@ -38,6 +42,26 @@ type Tab struct {
 
 func (ui *UserInterface) NewTab(addr string) *Tab {
 	t := &Tab{}
+
+	// tab
+	t.favicon = gtk.NewImage()
+	t.favicon.SetSizeRequest(16, 16)
+	t.label = gtk.NewLabel(addr)
+
+	tabtable := gtk.NewTable(1, 2, false)
+	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 1, 1)
+	tabtable.Attach(t.label, 1, 2, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+
+	eventbox := gtk.NewEventBox()
+	eventbox.Add(tabtable)
+	eventbox.ShowAll()
+
+	t.progressbar = gtk.NewProgressBar()
+	t.progressbar.SetSizeRequest(4, 4)
+
+	t.tabbox = gtk.NewVBox(false, 0)
+	t.tabbox.Add(eventbox)
+	t.tabbox.PackEnd(t.progressbar, false, true, 0)
 
 	//urlbar
 	t.urlbarCompletion = gtk.NewEntryCompletion()
@@ -55,49 +79,47 @@ func (ui *UserInterface) NewTab(addr string) *Tab {
 	t.swin = gtk.NewScrolledWindow(nil, nil)
 	t.swin.Add(t.webview)
 
+	//findbar
+	t.findbar = gtk.NewEntry()
+	t.findbar.Connect("changed", func() { t.onSearch(true) })
+
+	t.findbtnCS = gtk.NewToggleButtonWithLabel("Aa")
+	t.findbtnCS.Clicked(func() { t.onSearch(true) })
+
+	t.findbtnNext = gtk.NewButton()
+	t.findbtnNext.SetImage(gtk.NewArrow(gtk.ARROW_RIGHT, gtk.SHADOW_NONE))
+	t.findbtnNext.Clicked(func() { t.onSearch(true) })
+
+	t.findbtnPrev = gtk.NewButton()
+	t.findbtnPrev.SetImage(gtk.NewArrow(gtk.ARROW_LEFT, gtk.SHADOW_NONE))
+	t.findbtnPrev.Clicked(func() { t.onSearch(false) })
+
+	t.findbox = gtk.NewTable(1, 4, false)
+	t.findbox.Attach(t.findbtnCS, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	t.findbox.Attach(t.findbar, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.FILL, 0, 0)
+	t.findbox.Attach(t.findbtnPrev, 2, 3, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	t.findbox.Attach(t.findbtnNext, 3, 4, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+
+	// t.findbox = gtk.NewHBox(false, 0)
+	// t.findbox.Add(t.findbar)
+	// t.findbox.PackEnd(t.findbtnCS, false, false, 0)
+	// t.findbox.PackEnd(t.findbtnNext, false, false, 0)
+	// t.findbox.PackEnd(t.findbtnPrev, false, false, 0)
+
+	//main container
 	t.vbox = gtk.NewVBox(false, 0)
 	t.vbox.PackStart(t.urlbar, false, false, 0)
 	t.vbox.PackStart(t.swin, true, true, 0)
-
-	// tab
-	t.favicon = gtk.NewImage()
-	t.favicon.SetSizeRequest(16, 16)
-	t.label = gtk.NewLabel(addr)
-
-	// t.progressbar.SetOrientation(gtk.PROGRESS_BOTTOM_TO_TOP)
-
-	// htabbox := gtk.NewHBox(false, 0)
-
-	// htabbox.PackStart(t.favicon, false, false, 0)
-	// htabbox.PackStart(t.label, false, false, 1)
-	// htabbox.PackEnd(t.progressbar, false, false, 0)
-
-	tabtable := gtk.NewTable(1, 2, false)
-	tabtable.Attach(t.favicon, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 1, 1)
-	tabtable.Attach(t.label, 1, 2, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
-	// tabtable.Attach(t.progressbar, 0, 2, 1, 2, gtk.FILL, gtk.FILL, 0, 0)
-
-	// vtabbox := gtk.NewVBox(false, 0)
-	// vtabbox.PackStart(htabbox, true, true, 0)
-	// vtabbox.PackEnd(t.progressbar, false, false, 0)
-
-	eventbox := gtk.NewEventBox()
-	eventbox.Add(tabtable)
-	eventbox.ShowAll()
-
-	t.progressbar = gtk.NewProgressBar()
-	t.progressbar.SetSizeRequest(4, 4)
-
-	t.tabbox = gtk.NewVBox(false, 0)
-	t.tabbox.Add(eventbox)
-	t.tabbox.PackEnd(t.progressbar, false, true, 0)
+	t.vbox.PackEnd(t.findbox, false, false, 0)
 
 	//notebook
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
 	ui.notebook.ShowAll()
 	ui.notebook.SetCurrentPage(n)
 	t.urlbar.GrabFocus()
+
 	t.progressbar.SetVisible(false)
+	t.findbox.SetVisible(false)
 
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
@@ -363,34 +385,20 @@ func (t *Tab) Reload() {
 	t.webview.Reload()
 }
 
-func (ui *UserInterface) CloseCurrentTab() {
-	n := ui.notebook.GetCurrentPage()
-	ui.CloseTab(n)
-}
-
-func (ui *UserInterface) CloseTab(n int) {
-	if len(ui.tabs) > 1 {
-		if n == 0 {
-			ui.notebook.SetCurrentPage(n + 1)
-		} else {
-			ui.notebook.SetCurrentPage(n - 1)
-		}
+func (t *Tab) onSearch(next bool) {
+	text := t.findbar.GetText()
+	if len(text) == 0 {
+		return
 	}
 
-	ui.notebook.RemovePage(ui.tabs[n].vbox, n)
+	// var next = true
+	// if data := ctx.Data(); data != nil {
+	// 	next = data.(bool)
+	// }
 
-	ui.tabs[n] = nil
-	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
+	t.webview.UnmarkTextMatches()
+	t.webview.SearchText(text, t.findbtnCS.GetActive(), next, true)
 
-	if len(ui.tabs) == 0 {
-		gtk.MainQuit()
-	}
-}
-
-func (ui *UserInterface) GetCurrentTab() *Tab {
-	n := ui.notebook.GetCurrentPage()
-	if n < 0 {
-		return nil
-	}
-	return ui.tabs[n]
+	t.webview.MarkTextMatches(text, t.findbtnCS.GetActive(), 128)
+	t.webview.SetHighlightTextMatches(true)
 }

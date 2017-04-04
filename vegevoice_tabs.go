@@ -78,6 +78,8 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	ApplySettings(t.webview)
 
 	t.swin = gtk.NewScrolledWindow(nil, nil)
+	t.swin.SetPolicy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+	t.swin.SetShadowType(gtk.SHADOW_IN)
 	t.swin.Add(t.webview)
 
 	//findbar
@@ -114,6 +116,7 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.vbox.PackEnd(t.findbox, false, false, 0)
 
 	//notebook
+	ui.tabs = append(ui.tabs, t)
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
 	ui.notebook.ShowAll()
 	ui.notebook.SetCurrentPage(n)
@@ -125,11 +128,15 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
+	t.webview.Connect("download-requested", func() { log.Println("download") })
 	t.webview.Connect("create-web-view", t.onCreateWebView)
 	t.webview.Connect("icon-loaded", t.onIconLoaded)
 	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
 
 	t.initTabPopupMenu()
+
+	t.urlbarCompletion.Connect("action-activated", t.onUrlbarCompetionActivated)
+	t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
 
 	if len(reqURL) > 0 {
 		t.urlbar.Emit("activate")
@@ -137,10 +144,6 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 		t.label.SetText("New Tab")
 	}
 
-	t.urlbarCompletion.Connect("action-activated", t.onUrlbarCompetionActivated)
-	t.idonChanged = t.urlbar.Connect("changed", t.onUrlbarChanged)
-
-	ui.tabs = append(ui.tabs, t)
 	return t
 }
 
@@ -331,27 +334,63 @@ func (t *Tab) parseURL(reqURL string) *url.URL {
 }
 
 func (t *Tab) OpenUrl(u *url.URL) {
-	t.favicon.SetFromStock("refresh", 16)
-	t.label.SetText(u.Path)
+	log.Println("open URL:", u.String())
+	t.label.SetText(u.String())
 	t.urlbar.SetText(u.String())
+
+	// client := &http.Client{}
+	// req, err := http.NewRequest("GET", u.String(), nil)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+
+	// useragent, ok := conf.Webkit["user-agent"]
+	// if !ok {
+	// 	useragent = "Go-http-client/2.0"
+	// }
+	// req.Header.Set("User-Agent", useragent.(string))
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+
+	// // resp, err := http.Get(u.String())
+	// // if err != nil {
+	// // 	log.Println(err)
+	// // 	return
+	// // }
+	// data, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+	// log.Println(len(data))
+
 	t.webview.LoadUri(u.String())
+	// t.webview.LoadString(string(data), "text/html", "utf-8", u.String())
+	// t.webview.LoadHtmlString(string(data), u.String())
 	t.webview.GrabFocus()
 }
 
 func (t *Tab) onLoadProgressChanged() {
+	// log.Println("onLoadProgressChanged", t.webview.GetProgress())
 	t.progressbar.SetVisible(true)
 	t.progressbar.SetFraction(t.webview.GetProgress())
 
-	t.label.SetText(t.webview.GetTitle())
+	if title := t.webview.GetTitle(); len(title) > 0 {
+		t.label.SetText(title)
+	}
+
 	if !t.urlbar.HasFocus() {
 		t.urlbar.SetText(t.webview.GetUri())
 	}
 }
 
 func (t *Tab) onLoadFinished() {
+	// log.Println("onLoadFinished")
 	t.progressbar.SetVisible(false)
-	// style := t.progressbar.GetStyle()
-	// style.
 
 	title := t.webview.GetTitle()
 	uri := t.webview.GetUri()

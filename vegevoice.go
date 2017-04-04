@@ -43,12 +43,17 @@ func main() {
 	gtk.Init(nil)
 
 	ui = CreateUi()
-
 	for _, u := range urlstorage.GetPinnedTabs() {
 		ui.NewTab(u).Pinned = true
 	}
-	// ui.NewTab(conf.VegeVoice.StartPage)
-	ui.NewTab("")
+
+	if len(ui.tabs) == 0 {
+		if conf.VegeVoice.StartPage != "" {
+			ui.NewTab(conf.VegeVoice.StartPage)
+		} else {
+			ui.NewTab("http://golang.org")
+		}
+	}
 
 	gtk.Main()
 }

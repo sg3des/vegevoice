@@ -44,7 +44,7 @@ func main() {
 
 	ui = CreateUi()
 	for _, u := range urlstorage.GetPinnedTabs() {
-		ui.NewTab(u).Pinned = true
+		ui.NewTab(u).Pin()
 	}
 
 	if len(ui.tabs) == 0 {

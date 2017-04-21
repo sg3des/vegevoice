@@ -12,7 +12,9 @@ import (
 //conf structure contains configuration
 var conf struct {
 	VegeVoice struct {
-		StartPage string `toml:"start-page"`
+		StartPage       string `toml:"start-page"`
+		HomogeneousTabs bool   `toml:"homogeneous-tabs"`
+		HeightTabs      int    `toml:"height-tabs"`
 	} `toml:"vegevoice"`
 
 	Webkit map[string]interface{}
@@ -35,6 +37,10 @@ func ReadConf(dir string) {
 	if _, err := toml.DecodeFile(configfile, &conf); err != nil {
 		log.Println("failed decode config file", configfile, "reason:", err)
 		return
+	}
+
+	if conf.VegeVoice.HeightTabs == 0 {
+		conf.VegeVoice.HeightTabs = -1
 	}
 
 	ReadSettings(conf.Webkit)

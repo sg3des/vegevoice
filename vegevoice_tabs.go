@@ -30,12 +30,6 @@ type Tab struct {
 
 	webview *webkit.WebView
 
-	findbox     *gtk.Table
-	findbar     *gtk.Entry
-	findbtnCS   *gtk.ToggleButton
-	findbtnNext *gtk.Button
-	findbtnPrev *gtk.Button
-
 	vbox *gtk.VBox
 	swin *gtk.ScrolledWindow
 }
@@ -62,6 +56,7 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.tabbox = gtk.NewVBox(false, 0)
 	t.tabbox.Add(eventbox)
 	t.tabbox.PackEnd(t.progressbar, false, true, 0)
+	t.tabbox.SetSizeRequest(conf.VegeVoice.HeightTabs, conf.VegeVoice.HeightTabs)
 
 	//urlbar
 	t.urlbarCompletion = gtk.NewEntryCompletion()
@@ -82,48 +77,20 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.swin.SetShadowType(gtk.SHADOW_IN)
 	t.swin.Add(t.webview)
 
-	//findbar
-	t.findbar = gtk.NewEntry()
-	t.findbar.Connect("changed", func() { t.onSearch(true) })
-
-	t.findbtnCS = gtk.NewToggleButtonWithLabel("Aa")
-	t.findbtnCS.Clicked(func() { t.onSearch(true) })
-
-	t.findbtnNext = gtk.NewButton()
-	t.findbtnNext.SetImage(gtk.NewArrow(gtk.ARROW_RIGHT, gtk.SHADOW_NONE))
-	t.findbtnNext.Clicked(func() { t.onSearch(true) })
-
-	t.findbtnPrev = gtk.NewButton()
-	t.findbtnPrev.SetImage(gtk.NewArrow(gtk.ARROW_LEFT, gtk.SHADOW_NONE))
-	t.findbtnPrev.Clicked(func() { t.onSearch(false) })
-
-	t.findbox = gtk.NewTable(1, 4, false)
-	t.findbox.Attach(t.findbtnCS, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
-	t.findbox.Attach(t.findbar, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.FILL, 0, 0)
-	t.findbox.Attach(t.findbtnPrev, 2, 3, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
-	t.findbox.Attach(t.findbtnNext, 3, 4, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
-
-	// t.findbox = gtk.NewHBox(false, 0)
-	// t.findbox.Add(t.findbar)
-	// t.findbox.PackEnd(t.findbtnCS, false, false, 0)
-	// t.findbox.PackEnd(t.findbtnNext, false, false, 0)
-	// t.findbox.PackEnd(t.findbtnPrev, false, false, 0)
-
 	//main container
 	t.vbox = gtk.NewVBox(false, 0)
 	t.vbox.PackStart(t.urlbar, false, false, 0)
 	t.vbox.PackStart(t.swin, true, true, 0)
-	t.vbox.PackEnd(t.findbox, false, false, 0)
 
 	//notebook
 	ui.tabs = append(ui.tabs, t)
 	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
 	ui.notebook.ShowAll()
 	ui.notebook.SetCurrentPage(n)
+	ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
 	t.urlbar.GrabFocus()
 
 	t.progressbar.SetVisible(false)
-	t.findbox.SetVisible(false)
 
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
@@ -170,15 +137,23 @@ func (t *Tab) Pin() {
 	if t.Pinned {
 		t.Pinned = false
 		t.label.SetVisible(true)
+
+		t.tabbox.SetSizeRequest(-1, conf.VegeVoice.HeightTabs)
+		ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
+
 		urlstorage.DelPinnedTab(u)
 	} else {
 		t.Pinned = true
 		t.label.SetVisible(false)
+
+		t.tabbox.SetSizeRequest(conf.VegeVoice.HeightTabs, conf.VegeVoice.HeightTabs)
+		ui.notebook.ChildSet(t.vbox, "tab-expand", false)
+
 		urlstorage.AddPinnedTab(u)
 	}
 
 	t.Reorder(toPage)
-	ui.homogenousTabs()
+	// ui.homogenousTabs()
 }
 
 func (t *Tab) Reorder(to int) {
@@ -433,11 +408,11 @@ func (t *Tab) Reload() {
 	t.webview.Reload()
 }
 
-func (t *Tab) onSearch(next bool) {
-	text := t.findbar.GetText()
-	if len(text) == 0 {
-		return
-	}
+func (t *Tab) Find(text string, cs, next bool) {
+	// text := t.findbar.GetText()
+	// if len(text) == 0 {
+	// 	return
+	// }
 
 	// var next = true
 	// if data := ctx.Data(); data != nil {
@@ -445,8 +420,8 @@ func (t *Tab) onSearch(next bool) {
 	// }
 
 	t.webview.UnmarkTextMatches()
-	t.webview.SearchText(text, t.findbtnCS.GetActive(), next, true)
+	t.webview.SearchText(text, cs, next, true)
 
-	t.webview.MarkTextMatches(text, t.findbtnCS.GetActive(), 128)
+	t.webview.MarkTextMatches(text, cs, 128)
 	t.webview.SetHighlightTextMatches(true)
 }

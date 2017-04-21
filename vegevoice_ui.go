@@ -19,6 +19,8 @@ type UserInterface struct {
 	menubar  *gtk.Widget
 	notebook *gtk.Notebook
 	tabs     []*Tab
+
+	findbar *findbar
 }
 
 func CreateUi() *UserInterface {
@@ -27,7 +29,7 @@ func CreateUi() *UserInterface {
 	ui.window.SetSizeRequest(900, 600)
 	ui.window.SetTitle("webkit")
 	ui.window.Connect("destroy", ui.Quit)
-	ui.window.Connect("check-resize", ui.windowResize)
+	// ui.window.Connect("check-resize", ui.windowResize)
 
 	ui.menubar = ui.createMenubar()
 	ui.notebook = gtk.NewNotebook()
@@ -35,14 +37,18 @@ func CreateUi() *UserInterface {
 	ui.notebook.SetShowBorder(true)
 	ui.notebook.SetTabBorder(1)
 
+	ui.findbar = NewFindbar()
+
 	ui.vbox = gtk.NewVBox(false, 0)
 	ui.vbox.PackStart(ui.menubar, true, true, 0)
 	ui.vbox.PackStart(ui.notebook, true, true, 0)
+	ui.vbox.PackStart(ui.findbar.table, false, false, 0)
 
 	ui.window.Add(ui.vbox)
 	ui.window.ShowAll()
 
 	ui.menubar.SetVisible(false)
+	ui.findbar.SetVisible(false)
 
 	return ui
 }
@@ -100,8 +106,8 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	ui.actionGroup.AddAction(gtk.NewAction("Edit", "Edit", "", ""))
 
 	ui.newActionStock("Find", gtk.STOCK_FIND, "", ui.showFindbar)
-	ui.newAction("FindNext", "Find Next", "F3", ui.findNext)
-	ui.newAction("FindPrev", "Find Previous", "<shift>F3", ui.findPrev)
+	ui.newAction("FindNext", "Find Next", "F3", ui.findbar.Find)
+	ui.newAction("FindPrev", "Find Previous", "<shift>F3", ui.findbar.FindPrev)
 
 	// View
 	ui.actionGroup.AddAction(gtk.NewAction("View", "View", "", ""))
@@ -129,48 +135,6 @@ func (ui *UserInterface) newToggleAction(dst, label, accel string, state bool, f
 	action.SetActive(state)
 	action.Connect("activate", f)
 	ui.actionGroup.AddActionWithAccel(&action.Action, accel)
-}
-
-// actions
-func (ui *UserInterface) windowResize() {
-	ui.window.GetSize(&width, &height)
-	ui.notebook.SetSizeRequest(width, height)
-	ui.homogenousTabs()
-}
-
-func (ui *UserInterface) homogenousTabs() {
-	lenTabs := len(ui.tabs)
-	if lenTabs == 0 {
-		return
-	}
-
-	// var pinned int
-	for _, t := range ui.tabs {
-		if t.Pinned {
-			lenTabs--
-		}
-	}
-
-	if lenTabs == 0 {
-		return
-	}
-
-	tabwidth := (width - lenTabs) / lenTabs
-	leftwidth := (width - lenTabs) % lenTabs
-
-	for _, t := range ui.tabs {
-		if t.Pinned {
-			t.tabbox.SetSizeRequest(16, 16)
-			continue
-		}
-
-		if leftwidth > 0 {
-			t.tabbox.SetSizeRequest(tabwidth+1, 16)
-			leftwidth--
-		} else {
-			t.tabbox.SetSizeRequest(tabwidth, 16)
-		}
-	}
 }
 
 func (ui *UserInterface) newTab() {
@@ -213,10 +177,6 @@ func (ui *UserInterface) GetCurrentTab() *Tab {
 	return ui.tabs[n]
 }
 
-// func (ui *UserInterface) closeTab() {
-// 	ui.CloseCurrentTab()
-
-// }
 func (ui *UserInterface) focusurl() {
 	ui.GetCurrentTab().urlbar.GrabFocus()
 }
@@ -228,26 +188,8 @@ func (ui *UserInterface) next() {
 	ui.GetCurrentTab().HistoryNext()
 }
 
-func (ui *UserInterface) findNext() {
-	t := ui.GetCurrentTab()
-	t.findbox.SetVisible(true)
-	t.onSearch(true)
-}
-func (ui *UserInterface) findPrev() {
-	t := ui.GetCurrentTab()
-	t.findbox.SetVisible(true)
-	t.onSearch(false)
-}
-
 func (ui *UserInterface) showFindbar() {
-	t := ui.GetCurrentTab()
-	if t.findbox.GetVisible() {
-		t.findbox.SetVisible(false)
-	} else {
-		t.findbox.SetVisible(true)
-		t.findbar.GrabFocus()
-		t.onSearch(true)
-	}
+	ui.findbar.SetVisible(true)
 }
 
 func (ui *UserInterface) toggleMenuBar() {
@@ -257,4 +199,68 @@ func (ui *UserInterface) toggleMenuBar() {
 
 func (ui *UserInterface) Quit() {
 	gtk.MainQuit()
+}
+
+type findbar struct {
+	table     *gtk.Table
+	entryFind *gtk.Entry
+	btnCase   *gtk.ToggleButton
+	btnNext   *gtk.Button
+	btnPrev   *gtk.Button
+}
+
+func NewFindbar() *findbar {
+	var fb = new(findbar)
+
+	//findbar
+	fb.entryFind = gtk.NewEntry()
+	fb.entryFind.Connect("changed", fb.Find)
+
+	fb.btnCase = gtk.NewToggleButtonWithLabel("Aa")
+	fb.btnCase.Clicked(fb.Find)
+
+	fb.btnNext = gtk.NewButton()
+	fb.btnNext.SetImage(gtk.NewArrow(gtk.ARROW_RIGHT, gtk.SHADOW_NONE))
+	fb.btnNext.Clicked(fb.Find)
+
+	fb.btnPrev = gtk.NewButton()
+	fb.btnPrev.SetImage(gtk.NewArrow(gtk.ARROW_LEFT, gtk.SHADOW_NONE))
+	fb.btnPrev.Clicked(fb.FindPrev)
+
+	btnClose := gtk.NewButton()
+	btnClose.SetImage(gtk.NewImageFromStock(gtk.STOCK_CLOSE, gtk.ICON_SIZE_MENU))
+	btnClose.Clicked(func() { fb.SetVisible(false) })
+
+	fb.table = gtk.NewTable(1, 5, false)
+	fb.table.Attach(fb.btnCase, 0, 1, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	fb.table.Attach(fb.entryFind, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, gtk.FILL, 0, 0)
+	fb.table.Attach(fb.btnPrev, 2, 3, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	fb.table.Attach(fb.btnNext, 3, 4, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	fb.table.Attach(btnClose, 4, 5, 0, 1, gtk.FILL, gtk.FILL, 0, 0)
+	fb.table.ShowAll()
+
+	return fb
+}
+
+func (fb *findbar) SetVisible(b bool) {
+	fb.table.SetVisible(b)
+	if b {
+		fb.entryFind.GrabFocus()
+	}
+}
+
+func (fb *findbar) Find() {
+	text := fb.entryFind.GetText()
+	if len(text) == 0 {
+		return
+	}
+	ui.GetCurrentTab().Find(text, fb.btnCase.GetActive(), true)
+}
+
+func (fb *findbar) FindPrev() {
+	text := fb.entryFind.GetText()
+	if len(text) == 0 {
+		return
+	}
+	ui.GetCurrentTab().Find(text, fb.btnCase.GetActive(), false)
 }

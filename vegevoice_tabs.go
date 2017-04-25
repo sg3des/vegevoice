@@ -98,6 +98,7 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.webview.Connect("download-requested", func() { log.Println("download") })
 	t.webview.Connect("create-web-view", t.onCreateWebView)
 	t.webview.Connect("icon-loaded", t.onIconLoaded)
+	t.webview.Connect("resource-request-starting", t.onRequest)
 	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
 
 	t.initTabPopupMenu()
@@ -112,6 +113,12 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	}
 
 	return t
+}
+
+func (t *Tab) onRequest(ctx *glib.CallbackContext) {
+	// log.Println(ctx.Args(0), ctx.Args(1), ctx.Args(2), ctx.Args(3), ctx.Args(4), ctx.Args(5))
+	req := webkit.NetworkRequestFromNative(unsafe.Pointer(ctx.Args(2)))
+	log.Println(req.URL())
 }
 
 func (t *Tab) initTabPopupMenu() {

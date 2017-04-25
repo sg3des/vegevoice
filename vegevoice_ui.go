@@ -30,14 +30,13 @@ func CreateUi() *UserInterface {
 	ui.window.SetTitle("webkit")
 	ui.window.Connect("destroy", ui.Quit)
 	// ui.window.Connect("check-resize", ui.windowResize)
+	ui.findbar = ui.createFindbar()
 
 	ui.menubar = ui.createMenubar()
 	ui.notebook = gtk.NewNotebook()
 	ui.notebook.SetBorderWidth(0)
 	ui.notebook.SetShowBorder(true)
 	ui.notebook.SetTabBorder(1)
-
-	ui.findbar = NewFindbar()
 
 	ui.vbox = gtk.NewVBox(false, 0)
 	ui.vbox.PackStart(ui.menubar, true, true, 0)
@@ -106,7 +105,7 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	ui.actionGroup.AddAction(gtk.NewAction("Edit", "Edit", "", ""))
 
 	ui.newActionStock("Find", gtk.STOCK_FIND, "", ui.showFindbar)
-	ui.newAction("FindNext", "Find Next", "F3", ui.findbar.Find)
+	ui.newAction("FindNext", "Find Next", "F3", ui.findbar.FindNext)
 	ui.newAction("FindPrev", "Find Previous", "<shift>F3", ui.findbar.FindPrev)
 
 	// View
@@ -209,19 +208,19 @@ type findbar struct {
 	btnPrev   *gtk.Button
 }
 
-func NewFindbar() *findbar {
+func (ui *UserInterface) createFindbar() *findbar {
 	var fb = new(findbar)
 
 	//findbar
 	fb.entryFind = gtk.NewEntry()
-	fb.entryFind.Connect("changed", fb.Find)
+	fb.entryFind.Connect("changed", fb.FindNext)
 
 	fb.btnCase = gtk.NewToggleButtonWithLabel("Aa")
-	fb.btnCase.Clicked(fb.Find)
+	fb.btnCase.Clicked(fb.FindNext)
 
 	fb.btnNext = gtk.NewButton()
 	fb.btnNext.SetImage(gtk.NewArrow(gtk.ARROW_RIGHT, gtk.SHADOW_NONE))
-	fb.btnNext.Clicked(fb.Find)
+	fb.btnNext.Clicked(fb.FindNext)
 
 	fb.btnPrev = gtk.NewButton()
 	fb.btnPrev.SetImage(gtk.NewArrow(gtk.ARROW_LEFT, gtk.SHADOW_NONE))
@@ -249,7 +248,7 @@ func (fb *findbar) SetVisible(b bool) {
 	}
 }
 
-func (fb *findbar) Find() {
+func (fb *findbar) FindNext() {
 	text := fb.entryFind.GetText()
 	if len(text) == 0 {
 		return

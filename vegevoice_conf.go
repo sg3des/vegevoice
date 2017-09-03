@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"path"
 
 	"github.com/BurntSushi/toml"
 	"github.com/sg3des/vegevoice/webkit"
@@ -25,17 +24,15 @@ var conf struct {
 	}
 }
 
-//ReadConf set default values for configuration and parse config file
-func ReadConf(dir string) {
-	configfile := path.Join(dir, "vegevoice.conf")
-
-	if _, err := os.Stat(configfile); err != nil {
+//ReadConfFile set default config values and parse config file
+func ReadConfFile(filename string) {
+	if _, err := os.Stat(filename); err != nil {
 		log.Println(err)
 		return
 	}
 
-	if _, err := toml.DecodeFile(configfile, &conf); err != nil {
-		log.Println("failed decode config file", configfile, "reason:", err)
+	if _, err := toml.DecodeFile(filename, &conf); err != nil {
+		log.Println("failed decode config file", filename, "reason:", err)
 		return
 	}
 
@@ -67,4 +64,5 @@ func ApplySettings(webview *webkit.WebView) {
 		webview.SetZoomLevel(conf.Webview.Zoomlevel)
 	}
 	webview.SetFullContentZoom(conf.Webview.FullContentZoom)
+
 }

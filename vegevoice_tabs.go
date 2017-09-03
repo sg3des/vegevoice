@@ -1,8 +1,20 @@
 package main
 
+/*
+
+#include <webkit/webkit.h>
+
+static inline char* to_charptr(const gchar* s) { return (char*)s; }
+*/
+// #cgo pkg-config: webkit-1.0
+import "C"
+
 import (
+	"io"
 	"log"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"unsafe"
 
@@ -14,6 +26,7 @@ import (
 	"github.com/sg3des/vegevoice/webkit"
 )
 
+//Tab contains gtk2 widgets for one tab
 type Tab struct {
 	tabbox       *gtk.VBox
 	favicon      *gtk.Image
@@ -34,7 +47,8 @@ type Tab struct {
 	swin *gtk.ScrolledWindow
 }
 
-func (ui *UserInterface) NewTab(reqURL string) *Tab {
+//NewTab create new tab by URL and return Tab struct
+func NewTab(reqURL string) *Tab {
 	t := &Tab{}
 
 	// tab
@@ -52,6 +66,7 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 
 	t.progressbar = gtk.NewProgressBar()
 	t.progressbar.SetSizeRequest(4, 4)
+	t.progressbar.SetVisible(false)
 
 	t.tabbox = gtk.NewVBox(false, 0)
 	t.tabbox.Add(eventbox)
@@ -72,34 +87,16 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 	t.webview = webkit.NewWebView()
 	ApplySettings(t.webview)
 
-	t.swin = gtk.NewScrolledWindow(nil, nil)
-	t.swin.SetPolicy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-	t.swin.SetShadowType(gtk.SHADOW_IN)
-	t.swin.Add(t.webview)
-
-	//main container
-	t.vbox = gtk.NewVBox(false, 0)
-	t.vbox.PackStart(t.urlbar, false, false, 0)
-	t.vbox.PackStart(t.swin, true, true, 0)
-
-	//notebook
-	ui.tabs = append(ui.tabs, t)
-	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
-	ui.notebook.ShowAll()
-	ui.notebook.SetCurrentPage(n)
-	ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
-	t.urlbar.GrabFocus()
-
-	t.progressbar.SetVisible(false)
-
 	t.urlbar.Connect("activate", t.onUrlbarActivate)
 	t.webview.Connect("load-progress-changed", t.onLoadProgressChanged)
 	t.webview.Connect("load-finished", t.onLoadFinished)
-	t.webview.Connect("download-requested", func() { log.Println("download") })
 	t.webview.Connect("create-web-view", t.onCreateWebView)
 	t.webview.Connect("icon-loaded", t.onIconLoaded)
-	t.webview.Connect("resource-request-starting", t.onRequest)
+	// t.webview.Connect("resource-request-starting", t.onRequest)
+	// t.webview.Connect("navigation-policy-decision-requested", t.onNavPolReq)
+	// t.webview.Connect("button-release-event", t.onScrollClick)
 	t.tabbox.Connect("button-release-event", t.onLabelContextMenu)
+	t.webview.Connect("download-requested", t.onDownloadRequest)
 
 	t.initTabPopupMenu()
 
@@ -112,21 +109,42 @@ func (ui *UserInterface) NewTab(reqURL string) *Tab {
 		t.label.SetText("New Tab")
 	}
 
+	t.swin = gtk.NewScrolledWindow(nil, nil)
+	t.swin.SetPolicy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+	t.swin.SetShadowType(gtk.SHADOW_IN)
+	t.swin.Add(t.webview)
+
+	//main container
+	t.vbox = gtk.NewVBox(false, 0)
+	t.vbox.PackStart(t.urlbar, false, false, 0)
+	t.vbox.PackStart(t.swin, true, true, 0)
+
 	return t
 }
 
-func (t *Tab) onRequest(ctx *glib.CallbackContext) {
-	// log.Println(ctx.Args(0), ctx.Args(1), ctx.Args(2), ctx.Args(3), ctx.Args(4), ctx.Args(5))
-	req := webkit.NetworkRequestFromNative(unsafe.Pointer(ctx.Args(2)))
-	log.Println(req.URL())
-}
+// func (t *Tab) onScrollClick(ctx *glib.CallbackContext) {
+// 	arg := ctx.Args(0)
+// 	event := *(**gdk.EventButton)(unsafe.Pointer(&arg))
+
+// 	log.Println(event.Button)
+// 	// if event.Button == 2 {
+// 	// 	// t.tabPopupMenu.Popup(nil, nil, nil, t.label, uint(arg), uint32(ctx.Args(1)))
+// 	// }
+// 	// return false
+// }
+
+// func (t *Tab) onRequest(ctx *glib.CallbackContext) {
+// 	// log.Println("onRequest")
+// 	// req := webkit.NetworkRequestFromNative(unsafe.Pointer(ctx.Args(2)))
+// 	// log.Println(req.URL())
+// }
 
 func (t *Tab) initTabPopupMenu() {
 	itemPin := gtk.NewMenuItemWithLabel("Pin Tab")
 	itemClose := gtk.NewMenuItemWithLabel("Close Tab")
 	itemCloseOther := gtk.NewMenuItemWithLabel("Close Other Tabs")
 
-	itemPin.Connect("activate", t.Pin)
+	itemPin.Connect("activate", t.PopupMenuPinTab)
 	itemClose.Connect("activate", t.Close)
 	itemCloseOther.Connect("activate", t.CloseOtherTabs)
 
@@ -137,37 +155,39 @@ func (t *Tab) initTabPopupMenu() {
 	t.tabPopupMenu.ShowAll()
 }
 
-func (t *Tab) Pin() {
-	u := t.urlbar.GetText()
-	toPage := len(urlstorage.GetPinnedTabs())
-
+func (t *Tab) PopupMenuPinTab() {
 	if t.Pinned {
-		t.Pinned = false
-		t.label.SetVisible(true)
-
-		t.tabbox.SetSizeRequest(-1, conf.VegeVoice.HeightTabs)
-		ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
-
-		urlstorage.DelPinnedTab(u)
+		t.Unpin()
+		n := ui.GetTabN(t)
+		urlstorage.DelPinnedTab(n)
 	} else {
-		t.Pinned = true
-		t.label.SetVisible(false)
-
-		t.tabbox.SetSizeRequest(conf.VegeVoice.HeightTabs, conf.VegeVoice.HeightTabs)
-		ui.notebook.ChildSet(t.vbox, "tab-expand", false)
-
-		urlstorage.AddPinnedTab(u)
+		t.Pin()
+		urlstorage.AddPinnedTab(t.urlbar.GetText())
 	}
-
-	t.Reorder(toPage)
-	// ui.homogenousTabs()
 }
 
-func (t *Tab) Reorder(to int) {
-	n := ui.notebook.PageNum(t.vbox)
-	ui.notebook.ReorderChild(t.vbox, to)
-	ui.tabs[to], ui.tabs[n] = ui.tabs[n], ui.tabs[to]
+func (t *Tab) Pin() {
+	t.Pinned = true
+	t.label.SetVisible(false)
+	t.tabbox.SetSizeRequest(conf.VegeVoice.HeightTabs, conf.VegeVoice.HeightTabs)
+	ui.notebook.ChildSet(t.vbox, "tab-expand", false)
 }
+
+func (t *Tab) Unpin() {
+	t.Pinned = false
+	t.label.SetVisible(true)
+	t.tabbox.SetSizeRequest(-1, conf.VegeVoice.HeightTabs)
+	ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
+}
+
+// func (t *Tab) Reorder(to int) {
+// 	n := ui.notebook.PageNum(t.vbox)
+// 	ui.notebook.ReorderChild(t.vbox, to)
+// 	ui.tabs[to], ui.tabs[n] = ui.tabs[n], ui.tabs[to]
+// 	// if t.Pinned {
+// 	// 	urlstorage.MovePinnedTab(n, to)
+// 	// }
+// }
 
 func (t *Tab) Close() {
 	n := ui.notebook.PageNum(t.vbox)
@@ -177,13 +197,13 @@ func (t *Tab) Close() {
 func (t *Tab) CloseOtherTabs() {
 	min := 1
 	for {
-		for n, _t := range ui.tabs {
-			if _t.label == t.label {
+		for n, ot := range ui.tabs {
+			if ot.label == t.label {
 				ui.notebook.SetCurrentPage(n)
 				continue
 			}
 
-			if _t.Pinned {
+			if ot.Pinned {
 				min++
 				continue
 			}
@@ -208,7 +228,8 @@ func (t *Tab) onLabelContextMenu(ctx *glib.CallbackContext) {
 }
 
 func (t *Tab) onCreateWebView() interface{} {
-	newtab := ui.NewTab("")
+	newtab := NewTab("")
+	ui.AppendTab(newtab)
 	return newtab.webview.GetWebView()
 }
 
@@ -277,13 +298,13 @@ func (t *Tab) onUrlbarChanged() {
 }
 
 func (t *Tab) onUrlbarCompetionActivated(ctx *glib.CallbackContext) {
-	u := t.getUrlFromHints(int(ctx.Args(0)))
+	u := t.getURLFromHints(int(ctx.Args(0)))
 
 	t.urlbar.SetText(u)
 	t.urlbar.Emit("activate")
 }
 
-func (t *Tab) getUrlFromHints(i int) string {
+func (t *Tab) getURLFromHints(i int) string {
 	if i >= len(t.urlbarHints) {
 		log.Println("WARNING! iter more then hint urls")
 		return ""
@@ -316,9 +337,10 @@ func (t *Tab) parseURL(reqURL string) *url.URL {
 }
 
 func (t *Tab) OpenUrl(u *url.URL) {
-	log.Println("open URL:", u.String())
-	t.label.SetText(u.String())
-	t.urlbar.SetText(u.String())
+	surl := u.String()
+
+	t.label.SetText(surl)
+	t.urlbar.SetText(surl)
 
 	// client := &http.Client{}
 	// req, err := http.NewRequest("GET", u.String(), nil)
@@ -338,7 +360,7 @@ func (t *Tab) OpenUrl(u *url.URL) {
 	// 	return
 	// }
 
-	// // resp, err := http.Get(u.String())
+	// // resp, err := http.Get(surl)
 	// // if err != nil {
 	// // 	log.Println(err)
 	// // 	return
@@ -349,11 +371,12 @@ func (t *Tab) OpenUrl(u *url.URL) {
 	// 	return
 	// }
 	// log.Println(len(data))
-
-	t.webview.LoadUri(u.String())
-	// t.webview.LoadString(string(data), "text/html", "utf-8", u.String())
-	// t.webview.LoadHtmlString(string(data), u.String())
-	t.webview.GrabFocus()
+	// t.webview.GrabFocus()
+	t.webview.LoadUri(surl)
+	// t.webview.LoadString(string(data), "text/html", "utf-8", surl)
+	// t.webview.ShowAll()
+	// t.webview.LoadHtmlString(string(data), surl)
+	// log.Println("open URL:", surl)
 }
 
 func (t *Tab) onLoadProgressChanged() {
@@ -397,6 +420,34 @@ func (t *Tab) onIconLoaded(ctx *glib.CallbackContext) {
 	if favicon != nil {
 		t.favicon.SetFromPixbuf(favicon)
 	}
+}
+
+func (t *Tab) onDownloadRequest(ctx *glib.CallbackContext) {
+	d := webkit.NewDownload(unsafe.Pointer(ctx.Args(0)))
+
+	resp, err := http.Get(d.GetURI())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	f, err := os.OpenFile("./testdata/"+d.GetSuggestedFilename(), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func (t *Tab) downloadError(ctx *glib.CallbackContext) {
+	log.Println("ERROR", ctx.Args(2).ToString())
 }
 
 func (t *Tab) HistoryBack() {

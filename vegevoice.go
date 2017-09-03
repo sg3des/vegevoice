@@ -6,21 +6,24 @@ import (
 	"path"
 
 	"github.com/mattn/go-gtk/gtk"
+	"github.com/sg3des/argum"
 	"github.com/sg3des/vegevoice/urlstorage"
 )
 
-var (
-	ui *UserInterface
+var args struct {
+	URLs   []string
+	Config string `argum:"-c,--config"`
+}
 
-	dirConf string
-	dirStrg string
-)
+var ui *UserInterface
 
 func init() {
 	log.SetFlags(log.Lshortfile)
+
+	argum.MustParse(&args)
 }
 
-func resolveWD() {
+func resolveWD() (dirConf, dirStrg string) {
 	envConfig := os.Getenv("XDG_CONFIG_HOME")
 	if len(envConfig) == 0 {
 		envConfig = path.Join(os.Getenv("HOME"), ".config")
@@ -30,28 +33,42 @@ func resolveWD() {
 
 	dirStrg = path.Join(os.Getenv("HOME"), ".local", "share", "vegevoice")
 	os.MkdirAll(dirConf, 0755)
+
+	return
 }
 
 func main() {
-	resolveWD()
-	ReadConf(dirConf)
-	SetCacheDir(dirStrg)
+	dirConf, dirStrg := resolveWD()
 
-	go urlstorage.Initialize(dirStrg)
+	urlstorage.Initialize(dirStrg)
 	urlstorage.SetMaxItems(10)
+
+	if args.Config == "" {
+		args.Config = path.Join(dirConf, "vegevoice.conf")
+	}
+
+	ReadConfFile(args.Config)
+	SetCacheDir(dirStrg)
 
 	gtk.Init(nil)
 
 	ui = CreateUi()
+
 	for _, u := range urlstorage.GetPinnedTabs() {
-		ui.NewTab(u).Pin()
+		t := NewTab(u)
+		ui.AppendTab(t)
+		t.Pin()
 	}
 
-	if len(ui.tabs) == 0 {
+	for _, url := range args.URLs {
+		ui.AppendTab(NewTab(url))
+	}
+
+	if len(args.URLs) == 0 {
 		if conf.VegeVoice.StartPage != "" {
-			ui.NewTab(conf.VegeVoice.StartPage)
+			ui.AppendTab(NewTab(conf.VegeVoice.StartPage))
 		} else {
-			ui.NewTab("http://golang.org")
+			ui.AppendTab(NewTab("https://google.com/"))
 		}
 	}
 

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"log"
+	"unsafe"
+
+	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 )
 
@@ -21,13 +25,15 @@ type UserInterface struct {
 	tabs     []*Tab
 
 	findbar *findbar
+
+	__reorder_hander_id int
 }
 
 func CreateUi() *UserInterface {
 	ui := &UserInterface{}
 	ui.window = gtk.NewWindow(gtk.WINDOW_TOPLEVEL)
 	ui.window.SetSizeRequest(900, 600)
-	ui.window.SetTitle("webkit")
+	ui.window.SetTitle("Vegevoice")
 	ui.window.Connect("destroy", ui.Quit)
 	// ui.window.Connect("check-resize", ui.windowResize)
 	ui.findbar = ui.createFindbar()
@@ -37,6 +43,8 @@ func CreateUi() *UserInterface {
 	ui.notebook.SetBorderWidth(0)
 	ui.notebook.SetShowBorder(true)
 	ui.notebook.SetTabBorder(1)
+	ui.__reorder_hander_id = ui.notebook.Connect("page-reordered", ui.onPageReordered)
+	// ui.notebook.Connect("reorder-tab", ui.onReorderTab)
 
 	ui.vbox = gtk.NewVBox(false, 0)
 	ui.vbox.PackStart(ui.menubar, true, true, 0)
@@ -93,7 +101,7 @@ func (ui *UserInterface) createMenubar() *gtk.Widget {
 	// File
 	ui.actionGroup.AddAction(gtk.NewAction("File", "File", "", ""))
 
-	ui.newAction("NewTab", "New Tab", "<control>t", ui.newTab)
+	ui.newAction("NewTab", "New Tab", "<control>t", func() { ui.AppendTab(NewTab("")) })
 	ui.newAction("CloseTab", "Close Tab", "<control>w", ui.CloseCurrentTab)
 	ui.newAction("OpenUrl", "Open URL", "<control>l", ui.focusurl)
 	ui.newAction("Reload", "Reload", "<control>r", ui.reload)
@@ -136,12 +144,19 @@ func (ui *UserInterface) newToggleAction(dst, label, accel string, state bool, f
 	ui.actionGroup.AddActionWithAccel(&action.Action, accel)
 }
 
-func (ui *UserInterface) newTab() {
-	ui.NewTab("")
-}
+func (ui *UserInterface) AppendTab(t *Tab) {
+	if t == nil {
+		return
+	}
 
-func (ui *UserInterface) reload() {
-	ui.GetCurrentTab().Reload()
+	ui.tabs = append(ui.tabs, t)
+	n := ui.notebook.AppendPage(t.vbox, t.tabbox)
+	ui.notebook.ShowAll()
+	ui.notebook.SetCurrentPage(n)
+	ui.notebook.ChildSet(t.vbox, "tab-expand", conf.VegeVoice.HomogeneousTabs)
+	ui.notebook.SetReorderable(t.vbox, true)
+
+	t.urlbar.GrabFocus()
 }
 
 func (ui *UserInterface) CloseCurrentTab() {
@@ -149,6 +164,7 @@ func (ui *UserInterface) CloseCurrentTab() {
 	ui.CloseTab(n)
 }
 
+//CloseTab close tab
 func (ui *UserInterface) CloseTab(n int) {
 	if len(ui.tabs) > 1 {
 		if n == 0 {
@@ -158,16 +174,20 @@ func (ui *UserInterface) CloseTab(n int) {
 		}
 	}
 
+	log.Println("CloseTab", n)
 	ui.notebook.RemovePage(ui.tabs[n].vbox, n)
 
 	ui.tabs[n] = nil
 	ui.tabs = append(ui.tabs[:n], ui.tabs[n+1:]...)
+
+	log.Println("CloseTab", len(ui.tabs))
 
 	if len(ui.tabs) == 0 {
 		gtk.MainQuit()
 	}
 }
 
+//GetCurrentTab return current focused tab
 func (ui *UserInterface) GetCurrentTab() *Tab {
 	n := ui.notebook.GetCurrentPage()
 	if n < 0 {
@@ -176,13 +196,54 @@ func (ui *UserInterface) GetCurrentTab() *Tab {
 	return ui.tabs[n]
 }
 
+//GetTabN get number of tab in slice
+func (ui *UserInterface) GetTabN(t *Tab) int {
+	for n, tab := range ui.tabs {
+		if tab == t {
+			return n
+		}
+	}
+	log.Panicln("unknown tab", t.urlbar.GetText())
+	return -1
+}
+
+func (ui *UserInterface) onPageReordered(ctx *glib.CallbackContext) {
+	ui.notebook.HandlerDisconnect(ui.__reorder_hander_id)
+
+	child := *gtk.WidgetFromNative(unsafe.Pointer(ctx.Args(0)))
+	i := int(ctx.Args(1))
+
+	for n, t := range ui.tabs {
+		if child.GWidget == t.vbox.Container.Widget.GWidget && n != i {
+			if (ui.tabs[n].Pinned && ui.tabs[i].Pinned) ||
+				(!ui.tabs[n].Pinned && !ui.tabs[i].Pinned) {
+				ui.tabs[n], ui.tabs[i] = ui.tabs[i], ui.tabs[n]
+			} else {
+				ui.notebook.ReorderChild(t.vbox, n)
+			}
+			break
+		}
+	}
+
+	ui.__reorder_hander_id = ui.notebook.Connect("page-reordered", ui.onPageReordered)
+}
+
+func (ui *UserInterface) onReorderTab(ctx *glib.CallbackContext) bool {
+	log.Println(ctx.Args(0))
+	log.Println(ctx.Args(1))
+	return false
+}
+
 func (ui *UserInterface) focusurl() {
 	ui.GetCurrentTab().urlbar.GrabFocus()
 }
+func (ui *UserInterface) reload() {
+	ui.GetCurrentTab().Reload()
+}
+
 func (ui *UserInterface) back() {
 	ui.GetCurrentTab().HistoryBack()
 }
-
 func (ui *UserInterface) next() {
 	ui.GetCurrentTab().HistoryNext()
 }
@@ -190,7 +251,6 @@ func (ui *UserInterface) next() {
 func (ui *UserInterface) showFindbar() {
 	ui.findbar.SetVisible(true)
 }
-
 func (ui *UserInterface) toggleMenuBar() {
 	// conf.UserInterface.MenuBarVisible = !conf.UserInterface.MenuBarVisible
 	// ui.menubar.SetVisible(conf.UserInterface.MenuBarVisible)

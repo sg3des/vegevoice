@@ -30,6 +30,8 @@ static WebKitWebView* to_WebKitWebView(void* w) { return WEBKIT_WEB_VIEW(w); }
 static WebKitWebFrame* to_WebKitWebFrame(void* w) { return WEBKIT_WEB_FRAME(w); }
 
 static WebKitWebSettings* to_WebKitWebSettings(void* w) { return WEBKIT_WEB_SETTINGS(w); }
+
+static WebKitDownload* to_WebKitDownload(void* w) { return WEBKIT_DOWNLOAD(w); }
 */
 // #cgo pkg-config: webkit-1.0
 import "C"
@@ -454,3 +456,74 @@ func (nr *WebKitNetworkRequest) SetURL(url string) {
 	defer C.free_string(ptr)
 	C.webkit_network_request_set_uri((*C.WebKitNetworkRequest)(nr.GObject.Object), C.to_gcharptr(ptr))
 }
+
+//-----------------------------------------------------------------------
+// Download
+//-----------------------------------------------------------------------
+
+type Download struct {
+	glib.GObject
+}
+
+func NewDownload(p unsafe.Pointer) *Download {
+	return &Download{glib.GObject{p}}
+}
+
+func (d *Download) getDownload() *C.WebKitDownload {
+	return C.to_WebKitDownload(d.Object)
+}
+
+// WebKitDownload*
+// webkit_download_new (WebKitNetworkRequest *request);
+
+func (d *Download) Start() {
+	C.webkit_download_start(d.getDownload())
+}
+
+func (d *Download) Cancel() {
+	C.webkit_download_cancel(d.getDownload())
+}
+
+func (d *Download) GetURI() string {
+	return C.GoString(C.to_charptr(C.webkit_download_get_uri(d.getDownload())))
+}
+
+// WebKitNetworkRequest*
+// webkit_download_get_network_request (WebKitDownload *download);
+
+// WebKitNetworkResponse*
+// webkit_download_get_network_response (WebKitDownload *download);
+
+func (d *Download) GetSuggestedFilename() string {
+	return C.GoString(C.to_charptr(C.webkit_download_get_suggested_filename(d.getDownload())))
+}
+
+func (d *Download) GetDestinationURI() string {
+	return C.GoString(C.to_charptr(C.webkit_download_get_destination_uri(d.getDownload())))
+}
+
+func (d *Download) SetDestinationURI(dst string) {
+	pdst := C.CString(dst)
+	// defer C.free_string(pdst)
+	C.webkit_download_set_destination_uri(d.getDownload(), C.to_gcharptr(pdst))
+}
+
+func (d *Download) GetProgress() float32 {
+	return float32(C.webkit_download_get_progress(d.getDownload()))
+}
+
+// gdouble
+// webkit_download_get_elapsed_time (WebKitDownload *download);
+
+func (d *Download) GetTotalSize() uint64 {
+	return uint64(C.webkit_download_get_total_size(d.getDownload()))
+}
+
+// guint64
+// webkit_download_get_current_size (WebKitDownload *download);
+func (d *Download) GetCurrentSize() uint64 {
+	return uint64(C.webkit_download_get_current_size(d.getDownload()))
+}
+
+// WebKitDownloadStatus
+// webkit_download_get_status (WebKitDownload *download);

@@ -69,7 +69,7 @@ func saveUserURLs() {
 	}
 
 	filename := path.Join(wd, "user_urls.toml")
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -132,19 +132,21 @@ func GetPinnedTabs() []string {
 	return userURLs.PinnedTabs
 }
 
-func AddPinnedTab(u string) {
+func AddPinnedTab(u string) (n int) {
+	n = len(userURLs.PinnedTabs)
+
 	userURLs.PinnedTabs = append(userURLs.PinnedTabs, u)
+
+	saveUserURLs()
+	return
+}
+
+func DelPinnedTab(n int) {
+	userURLs.PinnedTabs = append(userURLs.PinnedTabs[:n], userURLs.PinnedTabs[n+1:]...)
 	saveUserURLs()
 }
 
-func DelPinnedTab(u string) {
-	for i, p := range userURLs.PinnedTabs {
-		if p == u {
-			userURLs.PinnedTabs = append(userURLs.PinnedTabs[:i], userURLs.PinnedTabs[i+1:]...)
-			saveUserURLs()
-			return
-		}
-	}
-
-	log.Printf("WARNING: url %s not find in saved pinned tabs", u)
+func MovePinnedTab(n0, n1 int) {
+	userURLs.PinnedTabs[n0], userURLs.PinnedTabs[n1] = userURLs.PinnedTabs[n1], userURLs.PinnedTabs[n0]
+	saveUserURLs()
 }
